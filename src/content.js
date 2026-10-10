@@ -1,9 +1,18 @@
 // Runs in the page's MAIN world so it can read the props React passes to
 // Strava's route chart (the route builder keeps its profile only in memory).
 (function () {
-  const { buildProfile, cumulativeDistance, legAnchors } = window.CumulativeGain;
-  const { TO_METRES, parseDistance, parseElevationUnit, isProfileTooltip, formatGain } =
-    window.CumulativeGainParse;
+  const { buildProfile, cumulativeDistance, legAnchors, gainAt } = window.CumulativeGain;
+  const {
+    TO_METRES,
+    parseDistance,
+    parseElevationUnit,
+    isProfileTooltip,
+    formatElevation,
+    formatDistance,
+    formatGrade,
+    formatDuration,
+  } = window.CumulativeGainParse;
+  const { findClimbs } = window.CumulativeGainClimbs;
 
   const DEBUG = localStorage.getItem("cumulative-gain:debug") === "1";
   const log = (...a) => DEBUG && console.log("[cumulative-gain]", ...a);
@@ -71,11 +80,12 @@
   }
 
   async function fromStreams(id) {
-    const url = `/activities/${id}/streams?stream_types[]=distance&stream_types[]=altitude`;
-    const res = await fetch(url, { credentials: "include" });
+    const types = ["distance", "altitude", "time"].map((t) => `stream_types[]=${t}`).join("&");
+    const res = await fetch(`/activities/${id}/streams?${types}`, { credentials: "include" });
     if (!res.ok) return null;
     const json = await res.json();
-    return isNums(json.distance) ? { distances: json.distance, elevations: json.altitude } : null;
+    if (!isNums(json.distance)) return null;
+    return { distances: json.distance, elevations: json.altitude, times: isNums(json.time) ? json.time : null };
   }
 
   const activityId = () => location.pathname.match(/^\/activities\/(\d+)/)?.[1];
@@ -111,20 +121,36 @@
     return undefined;
   }
 
-  // Profiles are cached per source array, so the builder rebuilds only when
-  // React hands the chart a new route.
+  // Gain and loss curves, cached per source array, so the builder rebuilds
+  // only when React hands the chart a new route.
   const cache = new WeakMap();
-  function profileFor(data) {
+  function profilesFor(data) {
     const key = data.key || data.elevations;
     let p = cache.get(key);
     if (!p) {
-      const span = data.distances[data.distances.length - 1];
-      const anchors = data.legs && legAnchors(data.legs, span);
+      const { distances, elevations } = data;
+      const span = distances[distances.length - 1];
+      const gainAnchors = data.legs && legAnchors(data.legs, span, "elevationGain");
+      const lossAnchors = data.legs && legAnchors(data.legs, span, "elevationLoss");
       // The route page's headline total wins; elsewhere the legs already
-      // match what Strava shows (the builder's total is the leg sum).
-      const total = data.total ?? (anchors ? undefined : findPageTotal());
-      p = buildProfile(data.distances, data.elevations, { threshold: THRESHOLD_M, anchors, total });
-      log("profile", data.distances.length, "points", anchors ? `${anchors.length} anchors` : `total ${total}`);
+      // match what Strava shows (the builder's totals are the leg sums).
+      const total = data.total ?? (gainAnchors ? undefined : findPageTotal());
+      // Strava shows no loss total on activities or the route page, so derive
+      // it from the gain total: gain - loss must equal the net elevation change.
+      const lossTotal =
+        total === undefined ? undefined : total - (elevations[elevations.length - 1] - elevations[0]);
+      const opts = { threshold: THRESHOLD_M };
+      const gain = buildProfile(distances, elevations, { ...opts, anchors: gainAnchors, total });
+      const loss = buildProfile(distances, elevations.map((e) => -e), { ...opts, anchors: lossAnchors, total: lossTotal });
+      // Climb gain is read off the gain curve so it agrees with the tooltip
+      // (and Strava's totals); time and VAM only exist for activities.
+      const climbs = findClimbs(distances, elevations).map((c, i) => {
+        const g = gain.at(c.end) - gain.at(c.start);
+        const t = data.times ? gainAt(distances, data.times, c.end) - gainAt(distances, data.times, c.start) : null;
+        return { ...c, n: i + 1, gain: g, time: t, vam: t > 0 ? (g / t) * 3600 : null };
+      });
+      p = { gain, loss, climbs };
+      log("profile", distances.length, "points", gainAnchors ? `${gainAnchors.length} anchors` : "", total, lossTotal);
       cache.set(key, p);
     }
     return p;
@@ -200,23 +226,29 @@
     return walk(tip);
   }
 
-  function relabel(node, value) {
+  function relabel(node, label, value) {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
     let labelled = false;
     let valued = false;
     for (let t = walker.nextNode(); t; t = walker.nextNode()) {
       let s = t.nodeValue;
+      // Text up to and including the new label; never searched for the value
+      // (the label itself can contain digits, e.g. "Climb 4").
+      let head = "";
       if (!labelled && /Elev(ation)?/.test(s)) {
-        s = s.replace(/Elev(ation)?/, "Gain");
+        const m = /Elev(ation)?/.exec(s);
+        head = s.slice(0, m.index) + label;
+        s = s.slice(m.index + m[0].length);
         labelled = true;
       }
       if (!valued && /\d/.test(s)) {
-        // Keep the unit only if this text node had one, so "95" + "m" in
-        // separate nodes doesn't become "134 m m".
-        s = s.replace(/-?\d[\d,.]*(\s*(?:m|ft)\b)?/, (_, u) => (u ? value : value.split(" ")[0]));
+        s = s.replace(/-?\d[\d,.]*(\s*(?:m|ft)(?![a-z]))?/, () => value);
         valued = true;
+      } else if (valued && !head && /^\s*(m|ft)\s*$/.test(s)) {
+        // The unit was in its own node ("95" + "m"); `value` carries its own.
+        s = "";
       }
-      t.nodeValue = s;
+      t.nodeValue = head + s;
     }
   }
 
@@ -248,73 +280,93 @@
         : v.replace(TRANSLATE, (_, x, y) => `translate(${x}, ${parseFloat(y) + dy})`)
     );
 
-  // Insert a real "Gain" row under Elevation: push the rows below it down a
-  // line and grow the background box to fit.
-  function renderSvg(tip, elevRow, value) {
+  // The climb row comes and goes as the hover enters and leaves a climb.
+  function removeStale(tip, extras) {
+    const keys = new Set(extras.map((x) => x.key));
+    for (const r of tip.querySelectorAll(`[${MARK}]`)) if (!keys.has(r.getAttribute(MARK))) r.remove();
+  }
+
+  // Rebuild an extra row from the live Elevation row (keeps font/attrs in
+  // sync) when its value changes. MARK holds the row's key ("gain"/"loss").
+  function fill(row, elevRow, { label, value }) {
+    const key = `${label}|${value}`;
+    if (row.getAttribute("data-cg-value") === key) return;
+    row.replaceChildren(...[...elevRow.childNodes].map((c) => c.cloneNode(true)));
+    relabel(row, label, value);
+    row.setAttribute("data-cg-value", key);
+  }
+
+  // Insert real rows under Elevation: push the rows below them down and grow
+  // the background box to fit.
+  function renderSvg(tip, elevRow, extras) {
+    removeStale(tip, extras);
     const rows = [...tip.querySelectorAll("text")].filter(
       (t) => !t.hasAttribute(MARK) && t.getAttribute("display") !== "none" && t.textContent.trim()
     );
     const ys = rows.map(baseY);
     const elevY = baseY(elevRow);
     const step = ys.length > 1 ? Math.abs(ys[1] - ys[0]) : 16;
-
-    let row = tip.querySelector(`text[${MARK}]`);
-    if (!row) {
-      row = elevRow.cloneNode(true);
-      row.removeAttribute("id");
-      for (const a of [...row.attributes]) if (a.name.startsWith("data-cg-")) row.removeAttribute(a.name);
-      // Appended last: inserting between React/D3-managed rows can upset them.
-      tip.appendChild(row);
-    }
-    // Clone of the live elevation row each time keeps the font/attrs in sync.
     const attr = rowAttr(elevRow);
     const src = elevRow.getAttribute(`data-cg-${attr}`) === elevRow.getAttribute(attr)
       ? elevRow.getAttribute(`data-cg-base-${attr}`)
       : elevRow.getAttribute(attr);
-    const pos =
-      attr === "y"
-        ? String(elevY + step)
-        : src.replace(TRANSLATE, (_, x) => `translate(${x}, ${elevY + step})`);
-    if (row.getAttribute(attr) !== pos) row.setAttribute(attr, pos);
     // The activity chart hides every <text> on mouseleave but only re-shows its
     // own rows, so mirror the Elevation row's visibility.
     const display = elevRow.getAttribute("display");
-    if (display !== null && row.getAttribute("display") !== display) row.setAttribute("display", display);
-    if (row.getAttribute(MARK) !== value) {
-      row.textContent = "";
-      for (const c of elevRow.childNodes) row.appendChild(c.cloneNode(true));
-      relabel(row, value);
-      row.setAttribute(MARK, value);
-    }
 
+    const mine = extras.map((x, k) => {
+      let row = tip.querySelector(`text[${MARK}="${x.key}"]`);
+      if (!row) {
+        row = elevRow.cloneNode(true);
+        row.removeAttribute("id");
+        for (const a of [...row.attributes]) if (a.name.startsWith("data-cg-")) row.removeAttribute(a.name);
+        row.setAttribute(MARK, x.key);
+        // Appended last: inserting between React/D3-managed rows can upset them.
+        tip.appendChild(row);
+      }
+      const y = elevY + step * (k + 1);
+      const pos = attr === "y" ? String(y) : src.replace(TRANSLATE, (_, px) => `translate(${px}, ${y})`);
+      if (row.getAttribute(attr) !== pos) row.setAttribute(attr, pos);
+      if (display !== null && row.getAttribute("display") !== display) row.setAttribute("display", display);
+      fill(row, elevRow, x);
+      return row;
+    });
+
+    const dy = step * extras.length;
     rows.forEach((r, i) => {
-      if (ys[i] > elevY) shiftRow(r, step);
+      if (ys[i] > elevY) shiftRow(r, dy);
     });
 
     const rect = tip.querySelector("rect");
     if (rect) {
-      setFromBase(rect, "height", (h) => parseFloat(h) + step);
+      setFromBase(rect, "height", (h) => parseFloat(h) + dy);
       const rowX = (r) =>
         r.hasAttribute("x") ? parseFloat(r.getAttribute("x")) : parseFloat(TRANSLATE.exec(r.getAttribute("transform") || "")?.[1] ?? 0);
       const pad = rowX(elevRow) - parseFloat(rect.getAttribute("x") || 0);
-      const need = Math.max(...[...rows, row].map((t) => t.getBBox().width)) + pad * 2;
+      const need = Math.max(...[...rows, ...mine].map((t) => t.getBBox().width)) + pad * 2;
       setFromBase(rect, "width", (w) => Math.max(parseFloat(w), Math.ceil(need)));
     }
   }
 
-  function renderHtml(tip, elevRow, value) {
-    let row = tip.querySelector(`[${MARK}]`);
-    if (!row) {
-      row = elevRow.cloneNode(true);
-      elevRow.after(row);
-    } else if (row.getAttribute(MARK) === value) return;
-    row.replaceChildren(...[...elevRow.childNodes].map((c) => c.cloneNode(true)));
-    relabel(row, value);
-    row.setAttribute(MARK, value);
+  function renderHtml(tip, elevRow, extras) {
+    removeStale(tip, extras);
+    let prev = elevRow;
+    for (const x of extras) {
+      let row = tip.querySelector(`[${MARK}="${x.key}"]`);
+      if (!row) {
+        row = elevRow.cloneNode(true);
+        row.setAttribute(MARK, x.key);
+        prev.after(row);
+      }
+      fill(row, elevRow, x);
+      prev = row;
+    }
   }
 
-  function render(tip) {
-    const svg = tip.ownerSVGElement || tip.closest("svg") || tip.parentElement?.querySelector("svg");
+  // Profile data behind a chart: React props (route page, builder) or the
+  // fetched activity streams. Only the activity's own elevation chart gets the
+  // fetched data, so other charts on the page are left alone.
+  function dataFor(svg) {
     let data = svg && fromReact(svg);
     // On the route page the chart's ancestors don't hold the legs; the
     // embedded page data does, along with Strava's total.
@@ -322,7 +374,13 @@
       const nd = nextData();
       if (nd) data = { ...data, legs: nd.legs, total: nd.total };
     }
-    data = data || fetched;
+    if (!data && fetched && svg?.closest("#elevation-chart")) data = fetched;
+    return data;
+  }
+
+  function render(tip) {
+    const svg = tip.ownerSVGElement || tip.closest("svg") || tip.parentElement?.querySelector("svg");
+    const data = dataFor(svg);
     if (!data) return;
     const text = tip.textContent;
     const shown = parseDistance(text);
@@ -332,9 +390,240 @@
     if (!elevRow) return;
 
     const d = (svg && crosshairDistance(svg, tip, shown)) ?? shown.metres;
-    const value = formatGain(profileFor(data).at(d), unit);
-    if (elevRow instanceof SVGElement) renderSvg(tip, elevRow.closest("text") || elevRow, value);
-    else renderHtml(tip, elevRow, value);
+    const { gain, loss, climbs } = profilesFor(data);
+    const extras = [
+      { key: "gain", label: "Gain", value: formatElevation(gain.at(d), unit) },
+      { key: "loss", label: "Loss", value: formatElevation(loss.at(d), unit) },
+    ];
+    const climb = climbs.find((c) => d >= c.start && d <= c.end);
+    if (climb) {
+      const value = `${formatDistance(climb.length, shown.unit === "mi" ? "mi" : "km", 1)} · ${formatGrade(climb.avgGrade)}`;
+      extras.push({ key: "climb", label: `Climb ${climb.n}`, value });
+    }
+    highlightBand(svg, climb?.n);
+    if (elevRow instanceof SVGElement) renderSvg(tip, elevRow.closest("text") || elevRow, extras);
+    else renderHtml(tip, elevRow, extras);
+  }
+
+
+  // ---------- climbs on the chart ----------
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const BAND_FILL = "rgb(252, 82, 0)"; // Strava orange
+  const BAND_OPACITY = "0.12";
+  const BAND_OPACITY_HOT = "0.3";
+
+  // Display units from the chart's own axis labels ("10.0 km", "200 m").
+  function chartUnits(svg) {
+    let dist = "km";
+    let elev = "m";
+    for (const t of svg.querySelectorAll("text")) {
+      const m = /^\s*[\d,.]+\s*(km|mi|m|ft)\s*$/.exec(t.textContent);
+      if (!m) continue;
+      if (m[1] === "km" || m[1] === "mi") dist = m[1];
+      else elev = m[1];
+    }
+    return { dist, elev };
+  }
+
+  // The filled elevation area: the widest path with a fill.
+  function areaPath(svg) {
+    let best = null;
+    for (const p of svg.querySelectorAll("path")) {
+      if (p.closest(`[${MARK}]`) || getComputedStyle(p).fill === "none") continue;
+      const w = p.getBBox().width;
+      if (!best || w > best.w) best = { p, w };
+    }
+    return best?.p;
+  }
+
+  // Shaded, numbered band per climb, drawn just before the elevation area so
+  // the area, crosshair and tooltip all stay on top. Positioned in the area
+  // path's own coordinates: its bbox spans the route's full distance.
+  function drawBands(svg, data, climbs) {
+    const area = areaPath(svg);
+    if (!area) return;
+    const box = area.getBBox();
+    const span = data.distances[data.distances.length - 1] - data.distances[0];
+    const sig = `${climbs.map((c) => `${c.start},${c.end}`).join(";")}|${box.x},${box.y},${box.width},${box.height}`;
+    let g = svg.querySelector(`g[${MARK}="bands"]`);
+    if (g && g.getAttribute("data-cg-sig") === sig && g.nextElementSibling === anchorFor(area, g.parentElement)) return;
+
+    // Insert beside the area's top-level group inside the plot group.
+    const plot = area.closest("svg > g") || svg;
+    let anchor = area;
+    while (anchor.parentElement && anchor.parentElement !== plot) anchor = anchor.parentElement;
+    if (!g) {
+      g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute(MARK, "bands");
+      g.setAttribute("pointer-events", "none");
+    }
+    plot.insertBefore(g, anchor);
+    const m = plot.getScreenCTM().inverse().multiply(area.getScreenCTM());
+    g.setAttribute("transform", `matrix(${m.a},${m.b},${m.c},${m.d},${m.e},${m.f})`);
+    g.replaceChildren();
+    const x = (d) => box.x + ((d - data.distances[0]) / span) * box.width;
+    const top = Math.min(0, box.y);
+    const bottom = box.y + box.height;
+    for (const c of climbs) {
+      const r = document.createElementNS(SVG_NS, "rect");
+      r.setAttribute("data-climb", c.n);
+      r.setAttribute("x", x(c.start));
+      r.setAttribute("width", Math.max(1, x(c.end) - x(c.start)));
+      r.setAttribute("y", top);
+      r.setAttribute("height", bottom - top);
+      r.setAttribute("fill", BAND_FILL);
+      r.setAttribute("fill-opacity", BAND_OPACITY);
+      const label = document.createElementNS(SVG_NS, "text");
+      label.setAttribute("x", (x(c.start) + x(c.end)) / 2);
+      label.setAttribute("y", top + 11);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("font-size", "10");
+      label.setAttribute("font-weight", "600");
+      label.setAttribute("fill", BAND_FILL);
+      label.textContent = c.n;
+      g.append(r, label);
+    }
+    g.setAttribute("data-cg-sig", sig);
+  }
+
+  function anchorFor(area, plot) {
+    let a = area;
+    while (a.parentElement && a.parentElement !== plot) a = a.parentElement;
+    return a;
+  }
+
+  // Emphasise one climb's band (hovered on the chart or in the table).
+  function highlightBand(svg, n) {
+    const g = svg?.querySelector(`g[${MARK}="bands"]`);
+    if (!g) return;
+    for (const r of g.querySelectorAll("rect")) {
+      const want = String(n) === r.getAttribute("data-climb") ? BAND_OPACITY_HOT : BAND_OPACITY;
+      if (r.getAttribute("fill-opacity") !== want) r.setAttribute("fill-opacity", want);
+    }
+  }
+
+  // ---------- climbs table ----------
+
+  // Route page: a "Climbs" section styled by cloning the Segments section's
+  // classes. Activity page: under the elevation chart, using Strava's own
+  // table classes. Not shown in the builder (no room).
+  function placeTable(svg) {
+    if (routeId()) {
+      const seg = [...document.querySelectorAll("h3")].find((h) => h.textContent.trim() === "Segments");
+      if (seg) return { before: seg.parentElement, sectionClass: seg.parentElement.className, headClass: seg.className };
+      const chart = svg.closest("div[class*='chart']") || svg.parentElement;
+      return { after: chart, sectionClass: "", headClass: "" };
+    }
+    if (activityId()) {
+      const profile = document.getElementById("elevation-profile");
+      if (profile) return { after: profile, sectionClass: "", headClass: "", tableClass: "dense hoverable" };
+    }
+    return null;
+  }
+
+  function renderTable(svg, data, climbs) {
+    const place = placeTable(svg);
+    if (!place) return;
+    const units = chartUnits(svg);
+    const hasTime = climbs.some((c) => c.time > 0);
+    const sig = JSON.stringify([units, hasTime, climbs.map((c) => [c.start, c.end, Math.round(c.gain)])]);
+    let section = document.querySelector(`[${MARK}="climbs"]`);
+    if (section?.getAttribute("data-cg-sig") === sig && section.isConnected) return;
+
+    if (!section) {
+      section = document.createElement("div");
+      section.setAttribute(MARK, "climbs");
+    }
+    section.className = place.sectionClass;
+    if (!place.sectionClass) section.style.cssText = "padding: 8px 20px 20px;";
+    if (place.before) place.before.before(section);
+    else place.after.after(section);
+
+    const h = document.createElement("h3");
+    h.className = place.headClass;
+    h.textContent = "Climbs";
+    const table = document.createElement("table");
+    if (place.tableClass) table.className = place.tableClass;
+    if (!place.sectionClass) table.style.width = "100%";
+    const cols = ["#", "Start", "Length", "Gain", "Avg. Grade", "Max. Grade"];
+    if (hasTime) cols.push("Time", "VAM");
+    const head = table.createTHead().insertRow();
+    for (const c of cols) head.appendChild(Object.assign(document.createElement("th"), { textContent: c }));
+    const body = table.createTBody();
+    for (const c of climbs) {
+      const row = body.insertRow();
+      const cells = [
+        c.n,
+        formatDistance(c.start, units.dist, 1),
+        formatDistance(c.length, units.dist, 2),
+        formatElevation(c.gain, units.elev),
+        formatGrade(c.avgGrade),
+        formatGrade(c.maxGrade),
+      ];
+      if (hasTime) {
+        cells.push(c.time > 0 ? formatDuration(c.time) : "–");
+        cells.push(c.vam ? `${Math.round(units.elev === "ft" ? c.vam / 0.3048 : c.vam).toLocaleString()} ${units.elev}/h` : "–");
+      }
+      for (const v of cells) row.insertCell().textContent = v;
+      row.addEventListener("mouseenter", () => highlightBand(svg, c.n));
+      row.addEventListener("mouseleave", () => highlightBand(svg, null));
+    }
+    if (!climbs.length) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = cols.length;
+      cell.textContent = "No climbs detected";
+    }
+    section.replaceChildren(h, table);
+    section.setAttribute("data-cg-sig", sig);
+  }
+
+  // ---------- activity splits ----------
+
+  // Second line in each split's Elev cell: "+8 / −20" (gain / loss). The
+  // existing net figure hides ups and downs that cancel out.
+  function renderSplits(data, gain, loss) {
+    const table = document.querySelector("#splits-container table");
+    const unitHead = table?.querySelector("thead th")?.textContent.trim().toLowerCase();
+    if (!table || !(unitHead === "km" || unitHead === "mi")) return;
+    const ths = [...table.querySelectorAll("thead th")];
+    const col = ths.findIndex((th) => th.textContent.trim() === "Elev");
+    if (col < 0) return;
+    const step = TO_METRES[unitHead];
+    const end = data.distances[data.distances.length - 1];
+    [...table.tBodies[0].rows].forEach((row, i) => {
+      const cell = row.cells[col];
+      if (!cell) return;
+      const ft = /feet|ft/.test(cell.querySelector("abbr")?.getAttribute("title") || cell.textContent);
+      const a = i * step;
+      const b = Math.min((i + 1) * step, end);
+      const fmt = (m) => Math.round(ft ? m / 0.3048 : m);
+      const text = `+${fmt(gain.at(b) - gain.at(a))} / −${fmt(loss.at(b) - loss.at(a))}`;
+      let line = cell.querySelector(`[${MARK}="split"]`);
+      if (line?.textContent === text) return;
+      if (!line) {
+        line = document.createElement("div");
+        line.setAttribute(MARK, "split");
+        line.title = "Gain / loss in this split";
+        line.style.cssText = "font-size: 11px; color: #6d6d78; white-space: nowrap;";
+        cell.appendChild(line);
+      }
+      line.textContent = text;
+    });
+  }
+
+  // Bands, table and splits for every profile chart on the page.
+  function decorate() {
+    for (const svg of document.querySelectorAll("svg")) {
+      const r = svg.getBoundingClientRect();
+      if (r.width < 300 || svg.closest(`[${MARK}]`)) continue;
+      const data = dataFor(svg);
+      if (!data) continue;
+      const { gain, loss, climbs } = profilesFor(data);
+      drawBands(svg, data, climbs);
+      renderTable(svg, data, climbs);
+      if (data === fetched && activityId()) renderSplits(data, gain, loss);
+    }
   }
 
   // ---------- wiring ----------
@@ -345,6 +634,11 @@
   function scan() {
     scheduled = false;
     ensureFetched();
+    try {
+      decorate();
+    } catch (e) {
+      log(e);
+    }
     for (const tip of findTooltips(document.body)) {
       try {
         render(tip);

@@ -1,9 +1,20 @@
 # Strava Cumulative Elevation Gain
 
-Chrome extension (MV3) that adds a **Gain** row to Strava's elevation-profile
-tooltip: elevation gained from the start up to the point you're hovering.
+Chrome extension (MV3) that adds **Gain** and **Loss** rows to Strava's
+elevation-profile tooltip: elevation gained and lost from the start up to the
+point you're hovering.
 
 Works on activity pages, saved route pages, and the route builder.
+
+It also adds:
+
+- **Climbs**: detected climbs are shaded and numbered on the elevation chart,
+  the tooltip shows which climb you're on ("Climb 4: 2.7 km · 14.0%"), and a
+  Climbs table lists start, length, gain and average/max grade (plus time and
+  VAM on activities). Hovering a table row highlights its band. The builder
+  gets the bands and tooltip row only.
+- **Split gain/loss**: on activities, each split's Elev cell gets a second line
+  with gain / loss for that split, since the net figure hides ups and downs.
 
 ## Install
 
@@ -21,13 +32,24 @@ Works on activity pages, saved route pages, and the route builder.
   - Activities: `/activities/:id/streams` (distance + altitude), scaled to the
     page's "Elevation" total.
 - **Gain** is computed with a 1 m hysteresis threshold (ignores noise), then
-  pinned to Strava's figures: at every route leg boundary (~50 m apart), or to
-  the activity total. Hover values therefore agree with Strava's own numbers.
+  pinned to Strava's figures: at every route leg boundary (~50 m apart), and to
+  the headline total where the page shows one. Hover values therefore agree
+  with Strava's own numbers.
+- **Loss** is the same calculation on the inverted profile, pinned to the legs'
+  `elevationLoss`. Where Strava only shows a gain total (activities, route
+  page), the loss total is derived from it so that gain − loss equals the net
+  elevation change.
 - **Hover position** comes from the crosshair's x position against the axis
   ticks (pixel-precise), falling back to the tooltip's rounded "Dist" label.
 - **Tooltip**: found by its text (Distance + Elevation + Grade), not by CSS
-  classes. A "Gain" row is cloned from the Elevation row, the rows below are
-  shifted down a line and the box is grown to fit.
+  classes. "Gain" and "Loss" rows are cloned from the Elevation row, the rows
+  below are shifted down and the box is grown to fit.
+
+- **Climb detection** (`src/climbs.js`) resamples to 10 m, smooths over 60 m,
+  and grows a climb from a low point while dips stay under max(10 m, 10% of
+  the rise so far). Flat run-ins/outs are trimmed, and an 800 m stretch that
+  stays within 6 m splits a climb. Climbs need ≥ 30 m, ≥ 200 m long and ≥ 3%
+  average. Gain is read off the gain curve, so it agrees with the tooltip.
 
 ## Debug
 

@@ -105,21 +105,26 @@
     return { distances, gains, at: (d) => gainAt(distances, gains, d) };
   }
 
-  // Strava route legs -> checkpoints [{d, g}], rescaled so the last checkpoint
-  // lands on `span` (the chart's own last distance; leg lengths and the chart
-  // stream disagree by a few metres).
-  function legAnchors(legs, span) {
+  // Strava route legs -> checkpoints [{d, g}] of the running total of `field`
+  // ("elevationGain" or "elevationLoss"), rescaled so the last checkpoint lands
+  // on `span` (the chart's own last distance; leg lengths and the chart stream
+  // disagree by a few metres).
+  function legAnchors(legs, span, field = "elevationGain") {
     const anchors = [{ d: 0, g: 0 }];
     let d = 0;
     let g = 0;
+    let has = false;
     for (const leg of legs || []) {
       for (const p of leg.paths || []) {
         d += p.length || 0;
-        g += p.elevationGain || 0;
+        if (typeof p[field] === "number") {
+          g += p[field];
+          has = true;
+        }
       }
       anchors.push({ d, g });
     }
-    if (d <= 0) return null;
+    if (d <= 0 || !has) return null;
     const k = span > 0 ? span / d : 1;
     return anchors.map((a) => ({ d: a.d * k, g: a.g }));
   }

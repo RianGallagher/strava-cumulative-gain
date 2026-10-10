@@ -83,3 +83,15 @@ test("buildProfile scales anchored curve to a differing headline total", () => {
   const q = buildProfile([0, 1000, 2000], [0, 50, 100], { anchors });
   assert.equal(q.at(2000), 100);
 });
+
+test("loss is the gain of the negated profile", () => {
+  const e = [100, 80, 90, 60, 70];
+  assert.equal(cumulativeGain(e.map((x) => -x)).at(-1), 50); // 20 + 30
+  assert.equal(cumulativeGain(e).at(-1), 20); // 10 + 10
+});
+
+test("legAnchors reads elevationLoss and returns null when the field is absent", () => {
+  const legs = [{ paths: [{ length: 100, elevationGain: 3, elevationLoss: 8 }] }];
+  assert.deepEqual(legAnchors(legs, 100, "elevationLoss"), [{ d: 0, g: 0 }, { d: 100, g: 8 }]);
+  assert.equal(legAnchors([{ paths: [{ length: 100 }] }], 100, "elevationLoss"), null);
+});

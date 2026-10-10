@@ -37,12 +37,30 @@
     return DIST_RE.test(text) && ELEV_RE.test(text) && GRADE_RE.test(text);
   }
 
-  function formatGain(metres, unit) {
+  function formatElevation(metres, unit) {
     const v = unit === "ft" ? metres / 0.3048 : metres;
     return `${Math.round(v).toLocaleString()} ${unit}`;
   }
 
-  const api = { TO_METRES, parseDistance, parseElevationUnit, isProfileTooltip, formatGain, DIST_RE, ELEV_RE };
+  // `unit` is "km" or "mi"; `decimals` is how many places to show.
+  function formatDistance(metres, unit, decimals = 1) {
+    return `${(metres / TO_METRES[unit]).toFixed(decimals)} ${unit}`;
+  }
+
+  function formatGrade(ratio) {
+    return `${(ratio * 100).toFixed(1)}%`;
+  }
+
+  // 754 -> "12:34", 3723 -> "1:02:03"
+  function formatDuration(seconds) {
+    const s = Math.round(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = String(s % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+  }
+
+  const api = { TO_METRES, formatDistance, formatGrade, formatDuration, parseDistance, parseElevationUnit, isProfileTooltip, formatElevation, DIST_RE, ELEV_RE };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.CumulativeGainParse = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
