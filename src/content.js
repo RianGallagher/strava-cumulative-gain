@@ -580,35 +580,57 @@
 
   // ---------- activity splits ----------
 
-  // Second line in each split's Elev cell: "+8 / −20" (gain / loss). The
-  // existing net figure hides ups and downs that cancel out.
+  // The Splits table is too narrow for extra columns, so clicking the Elev
+  // header switches that column between Strava's net value and "+gain/−loss"
+  // for the split. The choice is remembered.
+  const SPLITS_KEY = "cumulative-gain:splits";
+  const splitsMode = () => (localStorage.getItem(SPLITS_KEY) === "gainloss" ? "gainloss" : "net");
+
   function renderSplits(data, gain, loss) {
     const table = document.querySelector("#splits-container table");
     const unitHead = table?.querySelector("thead th")?.textContent.trim().toLowerCase();
     if (!table || !(unitHead === "km" || unitHead === "mi")) return;
     const ths = [...table.querySelectorAll("thead th")];
-    const col = ths.findIndex((th) => th.textContent.trim() === "Elev");
+    let col = ths.findIndex((th) => th.getAttribute(MARK) === "split-head");
+    if (col < 0) col = ths.findIndex((th) => th.textContent.trim() === "Elev");
     if (col < 0) return;
+    const mode = splitsMode();
+
+    const th = ths[col];
+    if (!th.hasAttribute(MARK)) {
+      th.setAttribute(MARK, "split-head");
+      th.style.cursor = "pointer";
+      th.style.whiteSpace = "nowrap";
+      th.title = "Click to switch between net elevation and gain / loss";
+      th.addEventListener("click", () => {
+        localStorage.setItem(SPLITS_KEY, splitsMode() === "net" ? "gainloss" : "net");
+        schedule();
+      });
+    }
+    const headText = mode === "net" ? "Elev ⇅" : "+/− ⇅";
+    if (th.textContent !== headText) th.textContent = headText;
+
     const step = TO_METRES[unitHead];
     const end = data.distances[data.distances.length - 1];
     [...table.tBodies[0].rows].forEach((row, i) => {
       const cell = row.cells[col];
       if (!cell) return;
-      const ft = /feet|ft/.test(cell.querySelector("abbr")?.getAttribute("title") || cell.textContent);
-      const a = i * step;
-      const b = Math.min((i + 1) * step, end);
-      const fmt = (m) => Math.round(ft ? m / 0.3048 : m);
-      const text = `+${fmt(gain.at(b) - gain.at(a))} / −${fmt(loss.at(b) - loss.at(a))}`;
-      let line = cell.querySelector(`[${MARK}="split"]`);
-      if (line?.textContent === text) return;
-      if (!line) {
-        line = document.createElement("div");
-        line.setAttribute(MARK, "split");
-        line.title = "Gain / loss in this split";
-        line.style.cssText = "font-size: 11px; color: #6d6d78; white-space: nowrap;";
-        cell.appendChild(line);
+      // Keep Strava's own markup so "net" mode restores it exactly.
+      if (!cell.hasAttribute("data-cg-net")) cell.setAttribute("data-cg-net", cell.innerHTML);
+      const net = cell.getAttribute("data-cg-net");
+      let html = net;
+      if (mode === "gainloss") {
+        const ft = /feet|\bft\b/.test(net);
+        const fmt = (m) => Math.round(ft ? m / 0.3048 : m);
+        const a = i * step;
+        const b = Math.min((i + 1) * step, end);
+        html = `+${fmt(gain.at(b) - gain.at(a))}/−${fmt(loss.at(b) - loss.at(a))}`;
       }
-      line.textContent = text;
+      if (cell.getAttribute("data-cg-html") !== html) {
+        cell.innerHTML = html;
+        cell.style.whiteSpace = "nowrap";
+        cell.setAttribute("data-cg-html", html);
+      }
     });
   }
 

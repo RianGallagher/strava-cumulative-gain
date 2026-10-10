@@ -13,8 +13,9 @@ It also adds:
   Climbs table lists start, length, gain and average/max grade (plus time and
   VAM on activities). Hovering a table row highlights its band. The builder
   gets the bands and tooltip row only.
-- **Split gain/loss**: on activities, each split's Elev cell gets a second line
-  with gain / loss for that split, since the net figure hides ups and downs.
+- **Split gain/loss**: on activities, click the Splits table's Elev header to
+  switch that column between Strava's net value and "+gain/−loss" for each
+  split (the net figure hides ups and downs). The choice is remembered.
 
 ## Install
 
