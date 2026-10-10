@@ -98,7 +98,10 @@
 
   function buildProfile(distances, elevations, { threshold = 0, total, anchors } = {}) {
     let gains = cumulativeGain(elevations, threshold);
-    gains = anchors && anchors.length > 1 ? anchorTo(distances, gains, anchors) : normalise(gains, total);
+    if (anchors && anchors.length > 1) gains = anchorTo(distances, gains, anchors);
+    // Applied after anchoring too: on the route page Strava's headline total
+    // can differ from the sum of its own leg gains (1,329 m vs 1,309 m).
+    gains = normalise(gains, total);
     return { distances, gains, at: (d) => gainAt(distances, gains, d) };
   }
 

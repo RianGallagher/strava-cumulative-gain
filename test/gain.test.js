@@ -74,3 +74,12 @@ test("legAnchors sums paths and rescales to the chart span", () => {
   ];
   assert.deepEqual(legAnchors(legs, 100), [{ d: 0, g: 0 }, { d: 50, g: 3 }, { d: 100, g: 10 }]);
 });
+
+test("buildProfile scales anchored curve to a differing headline total", () => {
+  const anchors = [{ d: 0, g: 0 }, { d: 1000, g: 50 }, { d: 2000, g: 100 }];
+  const p = buildProfile([0, 1000, 2000], [0, 50, 100], { anchors, total: 120 });
+  assert.equal(p.at(2000), 120);
+  assert.equal(p.at(1000), 60);
+  const q = buildProfile([0, 1000, 2000], [0, 50, 100], { anchors });
+  assert.equal(q.at(2000), 100);
+});

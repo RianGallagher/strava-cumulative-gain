@@ -120,7 +120,9 @@
     if (!p) {
       const span = data.distances[data.distances.length - 1];
       const anchors = data.legs && legAnchors(data.legs, span);
-      const total = anchors ? undefined : data.total ?? findPageTotal();
+      // The route page's headline total wins; elsewhere the legs already
+      // match what Strava shows (the builder's total is the leg sum).
+      const total = data.total ?? (anchors ? undefined : findPageTotal());
       p = buildProfile(data.distances, data.elevations, { threshold: THRESHOLD_M, anchors, total });
       log("profile", data.distances.length, "points", anchors ? `${anchors.length} anchors` : `total ${total}`);
       cache.set(key, p);
