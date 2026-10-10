@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Strava Cumulative Elevation Gain",
+  "version": "0.1.0",
+  "description": "Shows elevation gain so far in Strava's elevation-profile tooltips on activities, routes and the route builder.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.strava.com/*"],
+      "js": ["src/gain.js", "src/parse.js", "src/content.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}
