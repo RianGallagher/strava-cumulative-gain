@@ -6,9 +6,12 @@ point you're hovering.
 
 Works on activity pages, saved route pages, and the route builder.
 
-It also adds:
+Also:
 
-- **Climbs**: detected climbs are shaded and numbered on the elevation chart,
+- **Climbs** (opt-in): tick the small "Show climbs" checkbox (under the chart on
+  activities, above Segments on routes, beside "Hide Elevation" in the
+  builder). The choice is saved in localStorage and applies everywhere.
+  Detected climbs are shaded and numbered on the elevation chart,
   the tooltip shows which climb you're on ("Climb 4: 2.7 km · 14.0%"), and a
   Climbs table lists start, length, gain and average/max grade (plus time and
   VAM on activities). Hovering a table row highlights its band. The builder
@@ -57,6 +60,8 @@ It also adds:
 ```js
 localStorage.setItem("cumulative-gain:debug", "1") // then reload
 window.__cumulativeGain.fetched                    // activity / route fallback data
+localStorage.removeItem("cumulative-gain:climbs")   // reset climbs to off
+localStorage.removeItem("cumulative-gain:splits")   // reset splits to net
 ```
 
 ## Test

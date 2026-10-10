@@ -395,12 +395,12 @@
       { key: "gain", label: "Gain", value: formatElevation(gain.at(d), unit) },
       { key: "loss", label: "Loss", value: formatElevation(loss.at(d), unit) },
     ];
-    const climb = climbs.find((c) => d >= c.start && d <= c.end);
+    const climb = climbsOn() && climbs.find((c) => d >= c.start && d <= c.end);
     if (climb) {
       const value = `${formatDistance(climb.length, shown.unit === "mi" ? "mi" : "km", 1)} · ${formatGrade(climb.avgGrade)}`;
       extras.push({ key: "climb", label: `Climb ${climb.n}`, value });
     }
-    highlightBand(svg, climb?.n);
+    if (climb !== false) highlightBand(svg, climb?.n);
     if (elevRow instanceof SVGElement) renderSvg(tip, elevRow.closest("text") || elevRow, extras);
     else renderHtml(tip, elevRow, extras);
   }
@@ -503,12 +503,40 @@
     }
   }
 
-  // ---------- climbs table ----------
+  // ---------- climbs toggle and table ----------
 
-  // Route page: a "Climbs" section styled by cloning the Segments section's
-  // classes. Activity page: under the elevation chart, using Strava's own
-  // table classes. Not shown in the builder (no room).
-  function placeTable(svg) {
+  // Climbs are opt-in: a small "Show climbs" checkbox, remembered in
+  // localStorage so one choice covers activities, routes and the builder.
+  const CLIMBS_KEY = "cumulative-gain:climbs";
+  const climbsOn = () => localStorage.getItem(CLIMBS_KEY) === "on";
+
+  function toggleControl() {
+    let label = document.querySelector(`label[${MARK}="climbs-toggle"]`);
+    if (!label) {
+      label = document.createElement("label");
+      label.setAttribute(MARK, "climbs-toggle");
+      label.title = "Highlight climbs on the elevation chart";
+      label.style.cssText =
+        "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6d6d78; cursor: pointer; user-select: none;";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.style.cssText = "margin: 0; cursor: pointer;";
+      box.addEventListener("change", () => {
+        localStorage.setItem(CLIMBS_KEY, box.checked ? "on" : "off");
+        schedule();
+      });
+      label.append(box, "Show climbs");
+    }
+    const box = label.querySelector("input");
+    if (box.checked !== climbsOn()) box.checked = climbsOn();
+    return label;
+  }
+
+  // Where the checkbox (and, when on, the table) goes. Route page: above the
+  // Segments section, with the table styled by cloning its classes. Activity
+  // page: under the elevation chart, with Strava's own table classes.
+  // Builder: the checkbox only, beside "Hide Elevation".
+  function placeClimbs(svg) {
     if (routeId()) {
       const seg = [...document.querySelectorAll("h3")].find((h) => h.textContent.trim() === "Segments");
       if (seg) return { before: seg.parentElement, sectionClass: seg.parentElement.className, headClass: seg.className };
@@ -517,29 +545,59 @@
     }
     if (activityId()) {
       const profile = document.getElementById("elevation-profile");
-      if (profile) return { after: profile, sectionClass: "", headClass: "", tableClass: "dense hoverable" };
+      if (profile)
+        return { after: profile, sectionClass: "", headClass: "", tableClass: "dense hoverable", pad: "0 20px" };
     }
+    const expand = [...document.querySelectorAll("button")].find((b) =>
+      /^(Hide|Show) Elevation$/.test(b.textContent.trim())
+    );
+    if (expand) return { beside: expand.parentElement };
     return null;
   }
 
-  function renderTable(svg, data, climbs) {
-    const place = placeTable(svg);
+  function renderClimbs(svg, climbs) {
+    const place = placeClimbs(svg);
     if (!place) return;
-    const units = chartUnits(svg);
-    const hasTime = climbs.some((c) => c.time > 0);
-    const sig = JSON.stringify([units, hasTime, climbs.map((c) => [c.start, c.end, Math.round(c.gain)])]);
-    let section = document.querySelector(`[${MARK}="climbs"]`);
-    if (section?.getAttribute("data-cg-sig") === sig && section.isConnected) return;
+    const toggle = toggleControl();
 
-    if (!section) {
-      section = document.createElement("div");
-      section.setAttribute(MARK, "climbs");
+    if (place.beside) {
+      if (toggle.nextElementSibling !== place.beside) {
+        toggle.style.marginRight = "12px";
+        place.beside.before(toggle);
+      }
+      return;
     }
-    section.className = place.sectionClass;
-    if (!place.sectionClass) section.style.cssText = "padding: 8px 20px 20px;";
-    if (place.before) place.before.before(section);
-    else place.after.after(section);
 
+    let wrap = document.querySelector(`div[${MARK}="climbs"]`);
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.setAttribute(MARK, "climbs");
+    }
+    if (place.before ? wrap.nextElementSibling !== place.before : wrap.previousElementSibling !== place.after) {
+      if (place.before) place.before.before(wrap);
+      else place.after.after(wrap);
+    }
+    const line = wrap.querySelector(`div[${MARK}="climbs-line"]`) || document.createElement("div");
+    if (!line.isConnected) {
+      line.setAttribute(MARK, "climbs-line");
+      line.style.cssText = `padding: ${place.pad || "0"}; margin: 8px 0;`;
+      line.appendChild(toggle);
+      wrap.prepend(line);
+    } else if (toggle.parentElement !== line) line.appendChild(toggle);
+
+    const units = chartUnits(svg);
+    const on = climbsOn();
+    const hasTime = climbs.some((c) => c.time > 0);
+    const sig = JSON.stringify([on, units, hasTime, climbs.map((c) => [c.start, c.end, Math.round(c.gain)])]);
+    if (wrap.getAttribute("data-cg-sig") === sig) return;
+    wrap.setAttribute("data-cg-sig", sig);
+    wrap.querySelector(`div[${MARK}="climbs-table"]`)?.remove();
+    if (!on) return;
+
+    const section = document.createElement("div");
+    section.setAttribute(MARK, "climbs-table");
+    section.className = place.sectionClass;
+    if (place.pad) section.style.padding = `0 20px 20px`;
     const h = document.createElement("h3");
     h.className = place.headClass;
     h.textContent = "Climbs";
@@ -574,8 +632,8 @@
       cell.colSpan = cols.length;
       cell.textContent = "No climbs detected";
     }
-    section.replaceChildren(h, table);
-    section.setAttribute("data-cg-sig", sig);
+    section.append(h, table);
+    wrap.appendChild(section);
   }
 
   // ---------- activity splits ----------
@@ -642,8 +700,9 @@
       const data = dataFor(svg);
       if (!data) continue;
       const { gain, loss, climbs } = profilesFor(data);
-      drawBands(svg, data, climbs);
-      renderTable(svg, data, climbs);
+      if (climbsOn()) drawBands(svg, data, climbs);
+      else svg.querySelector(`g[${MARK}="bands"]`)?.remove();
+      renderClimbs(svg, climbs);
       if (data === fetched && activityId()) renderSplits(data, gain, loss);
     }
   }
