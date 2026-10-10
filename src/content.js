@@ -1,13 +1,13 @@
 // Runs in the page's MAIN world so it can read the props React passes to
 // Strava's route chart (the route builder keeps its profile only in memory).
 (function () {
-  const { buildProfile, cumulativeDistance, legAnchors } = window.CumGain;
+  const { buildProfile, cumulativeDistance, legAnchors } = window.CumulativeGain;
   const { TO_METRES, parseDistance, parseElevationUnit, isProfileTooltip, formatGain } =
-    window.CumGainParse;
+    window.CumulativeGainParse;
 
-  const DEBUG = localStorage.getItem("cumgain:debug") === "1";
-  const log = (...a) => DEBUG && console.log("[cumgain]", ...a);
-  const MARK = "data-cumgain";
+  const DEBUG = localStorage.getItem("cumulative-gain:debug") === "1";
+  const log = (...a) => DEBUG && console.log("[cumulative-gain]", ...a);
+  const MARK = "data-cumulative-gain";
   const THRESHOLD_M = 1;
 
   const isNums = (a) => Array.isArray(a) && a.length > 1 && typeof a[0] === "number";
@@ -370,5 +370,5 @@
   if (document.body) start();
   else document.addEventListener("DOMContentLoaded", start);
 
-  window.__cumgain = { fromReact, fromNextData, findPageTotal, get fetched() { return fetched; } };
+  window.__cumulativeGain = { fromReact, fromNextData, findPageTotal, get fetched() { return fetched; } };
 })();

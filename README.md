@@ -32,8 +32,8 @@ Works on activity pages, saved route pages, and the route builder.
 ## Debug
 
 ```js
-localStorage.setItem("cumgain:debug", "1") // then reload
-window.__cumgain.fetched                    // activity / route fallback data
+localStorage.setItem("cumulative-gain:debug", "1") // then reload
+window.__cumulativeGain.fetched                    // activity / route fallback data
 ```
 
 ## Test

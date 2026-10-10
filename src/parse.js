@@ -44,5 +44,5 @@
 
   const api = { TO_METRES, parseDistance, parseElevationUnit, isProfileTooltip, formatGain, DIST_RE, ELEV_RE };
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.CumGainParse = api;
+  else root.CumulativeGainParse = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

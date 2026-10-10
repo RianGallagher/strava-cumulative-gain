@@ -132,5 +132,5 @@
     legAnchors,
   };
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.CumGain = api;
+  else root.CumulativeGain = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
