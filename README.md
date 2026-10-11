@@ -77,8 +77,8 @@ npm run package   # runs the tests, then builds dist/cumulative-elevation-for-st
 ```
 
 Upload that zip in the Chrome Web Store Developer Dashboard. Listing copy,
-privacy answers and image paths are in `store/listing.md`; the privacy policy
-is `PRIVACY.md`.
+permission justification, privacy answers, asset status and version history
+are in `CHROMEWEBSTORE.md`; the privacy policy is `PRIVACY.md`.
 
 Regenerating assets (needs Pillow: `pip install pillow`):
 

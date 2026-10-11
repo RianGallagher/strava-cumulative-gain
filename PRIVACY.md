@@ -20,15 +20,18 @@ handle as little data as possible and to keep everything on your device.
 
 Two display preferences, kept in your browser's local storage for
 `www.strava.com`: whether "Show climbs" is ticked, and whether the Splits
-table shows net elevation or gain/loss. Nothing else is stored.
+table shows net elevation or gain/loss. Nothing else is stored. Clearing
+strava.com's site data in Chrome removes them; they are not removed
+automatically when you uninstall the extension.
 
 ## What it does not do
 
 - It does not send any data to the developer or to any third party. It has no
   servers, analytics, tracking or advertising.
 - It does not sell, share or transfer your data.
-- It does not run on any site other than `www.strava.com`, and requests no
-  browser permissions.
+- It does not run on any site other than `www.strava.com`. Chrome shows this
+  as "Read and change your data on www.strava.com"; it asks for no other
+  permissions.
 
 All calculations happen locally in your browser.
 

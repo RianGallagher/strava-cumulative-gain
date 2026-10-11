@@ -101,13 +101,18 @@
     fetched = null;
     const a = activityId();
     const r = routeId();
-    const p = a ? fromStreams(a) : r ? Promise.resolve(nextData()).then((d) => d || fromGpx(r)) : null;
-    p?.then((d) => {
-      if (fetchedFor !== path || !d) return;
-      fetched = d;
-      log("loaded", d.distances.length, "points");
-      schedule();
-    }).catch((e) => log(e));
+    if (!a && !r) return;
+    (async () => {
+      try {
+        const d = a ? await fromStreams(a) : nextData() || (await fromGpx(r));
+        if (fetchedFor !== path || !d) return;
+        fetched = d;
+        log("loaded", d.distances.length, "points");
+        schedule();
+      } catch (e) {
+        log(e);
+      }
+    })();
   }
 
   // Strava's headline "Elevation" / "Elevation Gain" stat, in metres.
@@ -520,6 +525,8 @@
         "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6d6d78; cursor: pointer; user-select: none;";
       const box = document.createElement("input");
       box.type = "checkbox";
+      box.id = "cumulative-gain-show-climbs";
+      label.htmlFor = box.id;
       box.style.cssText = "margin: 0; cursor: pointer;";
       box.addEventListener("change", () => {
         localStorage.setItem(CLIMBS_KEY, box.checked ? "on" : "off");
@@ -600,14 +607,16 @@
     if (place.pad) section.style.padding = `0 20px 20px`;
     const h = document.createElement("h3");
     h.className = place.headClass;
+    h.id = "cumulative-gain-climbs-heading";
     h.textContent = "Climbs";
     const table = document.createElement("table");
+    table.setAttribute("aria-labelledby", h.id);
     if (place.tableClass) table.className = place.tableClass;
     if (!place.sectionClass) table.style.width = "100%";
     const cols = ["#", "Start", "Length", "Gain", "Avg. Grade", "Max. Grade"];
     if (hasTime) cols.push("Time", "VAM");
     const head = table.createTHead().insertRow();
-    for (const c of cols) head.appendChild(Object.assign(document.createElement("th"), { textContent: c }));
+    for (const c of cols) head.appendChild(Object.assign(document.createElement("th"), { textContent: c, scope: "col" }));
     const body = table.createTBody();
     for (const c of climbs) {
       const row = body.insertRow();
@@ -654,19 +663,40 @@
     if (col < 0) return;
     const mode = splitsMode();
 
+    // A real button inside the header, so the toggle works from the keyboard
+    // and screen readers announce it (a clickable <th> is neither).
     const th = ths[col];
-    if (!th.hasAttribute(MARK)) {
+    let btn = th.querySelector(`button[${MARK}="split-toggle"]`);
+    if (!btn) {
       th.setAttribute(MARK, "split-head");
-      th.style.cursor = "pointer";
       th.style.whiteSpace = "nowrap";
-      th.title = "Click to switch between net elevation and gain / loss";
-      th.addEventListener("click", () => {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute(MARK, "split-toggle");
+      btn.title = "Switch between net elevation and gain / loss for each split";
+      // Look like the header text, but keep the browser's focus ring.
+      btn.style.cssText = "background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;";
+      btn.addEventListener("click", () => {
         localStorage.setItem(SPLITS_KEY, splitsMode() === "net" ? "gainloss" : "net");
         schedule();
       });
+      th.replaceChildren(btn);
     }
-    const headText = mode === "net" ? "Elev ⇅" : "+/− ⇅";
-    if (th.textContent !== headText) th.textContent = headText;
+    if (btn.getAttribute("data-cg-mode") !== mode) {
+      // Short visible label (the column is ~60 px wide); fuller text for
+      // screen readers. The accessible name stays the same and aria-pressed
+      // carries the state.
+      const shown = document.createElement("span");
+      shown.setAttribute("aria-hidden", "true");
+      shown.textContent = mode === "net" ? "Elev ⇅" : "+/− ⇅";
+      const sr = document.createElement("span");
+      sr.style.cssText =
+        "position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; white-space: nowrap; margin: -1px; padding: 0; border: 0;";
+      sr.textContent = "Show gain and loss per split";
+      btn.replaceChildren(shown, sr);
+      btn.setAttribute("aria-pressed", String(mode === "gainloss"));
+      btn.setAttribute("data-cg-mode", mode);
+    }
 
     const step = TO_METRES[unitHead];
     const end = data.distances[data.distances.length - 1];
