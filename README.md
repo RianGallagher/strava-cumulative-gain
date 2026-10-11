@@ -1,4 +1,4 @@
-# Strava Cumulative Elevation Gain
+# Cumulative Elevation for Strava
 
 Chrome extension (MV3) that adds **Gain** and **Loss** rows to Strava's
 elevation-profile tooltip: elevation gained and lost from the start up to the
@@ -69,3 +69,22 @@ localStorage.removeItem("cumulative-gain:splits")   // reset splits to net
 ```sh
 npm test
 ```
+
+## Publishing
+
+```sh
+npm run package   # runs the tests, then builds dist/cumulative-elevation-for-strava-<version>.zip
+```
+
+Upload that zip in the Chrome Web Store Developer Dashboard. Listing copy,
+privacy answers and image paths are in `store/listing.md`; the privacy policy
+is `PRIVACY.md`.
+
+Regenerating assets (needs Pillow: `pip install pillow`):
+
+```sh
+python scripts/make_icons.py         # icons/icon{16,48,128}.png
+python scripts/make_store_images.py  # store/images/* from store/captures/*
+```
+
+Bump `version` in `manifest.json` for each new upload.

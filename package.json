@@ -1,8 +1,9 @@
 {
-  "name": "strava-cumulative-gain",
-  "version": "0.1.0",
+  "name": "cumulative-elevation-for-strava",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "package": "npm test && sh scripts/package.sh"
   }
 }
