@@ -257,14 +257,38 @@
     }
   }
 
-  // Set an attribute relative to the value the page last wrote. If the page
-  // rewrites it, that becomes the new base, so re-running is idempotent.
+  // When we move one of Strava's tooltip rows or resize its box, we need
+  // Strava's own value (the "base") to adjust from. Comparing against what we
+  // last wrote isn't enough: Strava can write the exact value we wrote (e.g.
+  // two chart lines switched on at once grows the box by the same 32 px we
+  // added), and that write would be missed. So a dedicated observer records
+  // every write Strava makes to an attribute we adjust, and our own writes
+  // are discarded with takeRecords() at the end of each pass.
+  const tracked = new WeakMap(); // element -> Set of attribute names
+  const baseObserver = new MutationObserver((records) => {
+    noteBases(records);
+    schedule();
+  });
+  function noteBases(records) {
+    for (const r of records)
+      r.target.setAttribute(`data-cg-base-${r.attributeName}`, r.target.getAttribute(r.attributeName));
+  }
+  const baseOf = (el, attr) =>
+    el.hasAttribute(`data-cg-base-${attr}`) ? el.getAttribute(`data-cg-base-${attr}`) : el.getAttribute(attr);
+  function track(el, attr) {
+    let attrs = tracked.get(el);
+    if (attrs?.has(attr)) return;
+    if (!attrs) tracked.set(el, (attrs = new Set()));
+    attrs.add(attr);
+    el.setAttribute(`data-cg-base-${attr}`, el.getAttribute(attr));
+    baseObserver.observe(el, { attributes: true, attributeFilter: [...attrs] });
+  }
+
+  // Set an attribute relative to Strava's own value for it.
   function setFromBase(el, attr, fn) {
-    const cur = el.getAttribute(attr);
-    if (el.getAttribute(`data-cg-${attr}`) !== cur) el.setAttribute(`data-cg-base-${attr}`, cur);
-    const next = String(fn(el.getAttribute(`data-cg-base-${attr}`)));
-    if (next !== cur) el.setAttribute(attr, next);
-    el.setAttribute(`data-cg-${attr}`, next);
+    track(el, attr);
+    const next = String(fn(baseOf(el, attr)));
+    if (el.getAttribute(attr) !== next) el.setAttribute(attr, next);
   }
 
   // SVG rows are positioned either with y="41" (activity chart) or
@@ -273,9 +297,7 @@
   const rowAttr = (row) => (row.hasAttribute("y") ? "y" : "transform");
   const baseY = (row) => {
     const attr = rowAttr(row);
-    const v = row.getAttribute(`data-cg-${attr}`) === row.getAttribute(attr)
-      ? row.getAttribute(`data-cg-base-${attr}`)
-      : row.getAttribute(attr);
+    const v = baseOf(row, attr);
     return attr === "y" ? parseFloat(v) : parseFloat(TRANSLATE.exec(v || "")?.[2]);
   };
   const shiftRow = (row, dy) =>
@@ -312,9 +334,7 @@
     const elevY = baseY(elevRow);
     const step = ys.length > 1 ? Math.abs(ys[1] - ys[0]) : 16;
     const attr = rowAttr(elevRow);
-    const src = elevRow.getAttribute(`data-cg-${attr}`) === elevRow.getAttribute(attr)
-      ? elevRow.getAttribute(`data-cg-base-${attr}`)
-      : elevRow.getAttribute(attr);
+    const src = baseOf(elevRow, attr);
     // The activity chart hides every <text> on mouseleave but only re-shows its
     // own rows, so mirror the Elevation row's visibility.
     const display = elevRow.getAttribute("display");
@@ -756,6 +776,7 @@
   let scheduled = false;
   function scan() {
     scheduled = false;
+    noteBases(baseObserver.takeRecords());
     ensureFetched();
     try {
       decorate();
@@ -769,6 +790,8 @@
         log(e);
       }
     }
+    // Everything queued now is our own writes, not Strava's: drop them.
+    baseObserver.takeRecords();
   }
   function schedule() {
     if (scheduled || !document.body) return;
