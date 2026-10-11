@@ -653,6 +653,15 @@
   const SPLITS_KEY = "cumulative-gain:splits";
   const splitsMode = () => (localStorage.getItem(SPLITS_KEY) === "gainloss" ? "gainloss" : "net");
 
+  // `all: unset` removes the browser's focus ring too; keyboard users need it.
+  function focusRingStyle() {
+    if (document.querySelector(`style[${MARK}]`)) return;
+    const style = document.createElement("style");
+    style.setAttribute(MARK, "style");
+    style.textContent = `button[${MARK}="split-toggle"]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }`;
+    document.head.appendChild(style);
+  }
+
   function renderSplits(data, gain, loss) {
     const table = document.querySelector("#splits-container table");
     const unitHead = table?.querySelector("thead th")?.textContent.trim().toLowerCase();
@@ -674,8 +683,11 @@
       btn.type = "button";
       btn.setAttribute(MARK, "split-toggle");
       btn.title = "Switch between net elevation and gain / loss for each split";
-      // Look like the header text, but keep the browser's focus ring.
-      btn.style.cssText = "background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;";
+      // Strava styles every <button> (inline-flex, 34 px min-height), which
+      // pushed the label below the other headers. Reset everything so it
+      // reads as plain header text; focusRingStyle() restores a focus ring.
+      btn.style.cssText = "all: unset; cursor: pointer;";
+      focusRingStyle();
       btn.addEventListener("click", () => {
         localStorage.setItem(SPLITS_KEY, splitsMode() === "net" ? "gainloss" : "net");
         schedule();
