@@ -1,0 +1,96 @@
+import type { ProfileSource } from "../elevation-model.ts";
+import { readChartProps } from "../strava/chart-props.ts";
+import { readEmbeddedRoute } from "../strava/embedded-route.ts";
+import { createLoader } from "../strava/loader.ts";
+import { fetchRouteGpx } from "../strava/route-gpx.ts";
+import type { ClimbsPlacement, PageDependencies, StravaPage } from "./page.ts";
+
+// Parsing the embedded JSON is costly and a fresh parse means fresh arrays
+// (so a fresh elevation model), so it is re-read only when the script changes.
+function createEmbeddedRouteReader(document: Document, routeId: string): () => ProfileSource | null {
+  let readText: string | null | undefined;
+  let embeddedRoute: ProfileSource | null = null;
+  return () => {
+    const text = document.getElementById("__NEXT_DATA__")?.textContent ?? null;
+    if (text !== readText) {
+      readText = text;
+      embeddedRoute = readEmbeddedRoute(document, routeId);
+    }
+    return embeddedRoute;
+  };
+}
+
+function findSegmentsHeading(document: Document): HTMLHeadingElement | undefined {
+  return [...document.querySelectorAll("h3")].find((heading) => heading.textContent.trim() === "Segments");
+}
+
+export function createRoutePage(routeId: string, dependencies: PageDependencies): StravaPage {
+  const { document, fetch: fetchFunction, schedule } = dependencies;
+  const readEmbedded = createEmbeddedRouteReader(document, routeId);
+  const gpxLoader = createLoader(
+    () => {
+      const view = document.defaultView;
+      return view ? fetchRouteGpx(routeId, fetchFunction, new view.DOMParser()) : Promise.resolve(null);
+    },
+    schedule ? { schedule } : {},
+  );
+  let notifyReady: (() => void) | null = null;
+
+  return {
+    kind: "route",
+    // The GPX export is only requested when a chart turns out to need it;
+    // like a loader's start, only the first callback is kept.
+    prepare(onReady) {
+      notifyReady ??= onReady;
+    },
+    // The chart's own props, else the embedded page data, else the GPX export.
+    // The chart's ancestors don't hold the legs; the embedded data does, along
+    // with Strava's headline total.
+    profileSource(chart) {
+      const embedded = readEmbedded();
+      const properties = readChartProps(chart);
+      if (properties !== null) {
+        const { distances, elevations } = properties;
+        const legs = properties.legs ?? embedded?.legs ?? null;
+        const headlineGainMetres = embedded?.headlineGainMetres;
+        return {
+          distances,
+          elevations,
+          legs,
+          ...(headlineGainMetres === undefined ? {} : { headlineGainMetres }),
+        };
+      }
+      if (embedded !== null) return embedded;
+      gpxLoader.start(() => {
+        notifyReady?.();
+      });
+      return gpxLoader.result();
+    },
+    // Above the Segments section, styled like it; else straight after the chart.
+    climbsPlacement(chart): ClimbsPlacement | null {
+      const heading = findSegmentsHeading(document);
+      const section = heading?.parentElement;
+      if (heading && section) {
+        return {
+          position: "before",
+          anchor: section,
+          sectionClassName: section.className,
+          headingClassName: heading.className,
+          tableClassName: "",
+          horizontalPaddingPixels: 0,
+        };
+      }
+      const anchor = chart.closest("div[class*='chart']") ?? chart.parentElement;
+      if (anchor === null) return null;
+      return {
+        position: "after",
+        anchor,
+        sectionClassName: "",
+        headingClassName: "",
+        tableClassName: "",
+        horizontalPaddingPixels: 0,
+      };
+    },
+    splitsTable: () => null,
+  };
+}
