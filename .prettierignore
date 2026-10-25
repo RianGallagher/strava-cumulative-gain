@@ -1,0 +1,11 @@
+src/*.js
+test/*.test.js
+*.md
+build/
+dist/
+store/
+icons/
+.superpowers/
+.claude/
+node_modules/
+package-lock.json
