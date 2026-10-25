@@ -10,9 +10,9 @@ import {
 import { createTestDocument } from "../support/dom.ts";
 
 // Copied from Strava's activity page (D3): rows positioned with y, 16 px apart.
-function activityRow(id: string, title: string, value: string, positionY: number): string {
+function activityRow(id: string, title: string, value: string, positionPixels: number): string {
   return (
-    `<text id="infobox-text-${id}" x="10" y="${String(positionY)}">` +
+    `<text id="infobox-text-${id}" x="10" y="${String(positionPixels)}">` +
     `<tspan class="title">${title}: </tspan><tspan class="value" font-weight="bold">${value}</tspan></text>`
   );
 }
@@ -26,9 +26,9 @@ const ACTIVITY_TOOLTIP =
   "</g></svg>";
 
 // Copied from Strava's route page (React): rows positioned with transform.
-function routeRow(title: string, value: string, positionY: number): string {
+function routeRow(title: string, value: string, positionPixels: number): string {
   return (
-    `<text dy="1em" transform="translate(6, ${String(positionY)})"><tspan>${title}</tspan>` +
+    `<text dy="1em" transform="translate(6, ${String(positionPixels)})"><tspan>${title}</tspan>` +
     `<tspan class="Tooltip_value__x7Kq2" dx="5">${value}</tspan></text>`
   );
 }
@@ -86,8 +86,11 @@ function background(tooltip: Element): Element {
 /** Row titles from top to bottom, as the tooltip shows them. */
 function titlesInOrder(tooltip: Element): string[] {
   return [...tooltip.querySelectorAll("text")]
-    .map((row) => ({ title: row.firstChild?.textContent ?? "", positionY: Number(row.getAttribute("y")) }))
-    .sort((first, second) => first.positionY - second.positionY)
+    .map((row) => ({
+      title: row.firstChild?.textContent ?? "",
+      positionPixels: Number(row.getAttribute("y")),
+    }))
+    .sort((first, second) => first.positionPixels - second.positionPixels)
     .map((row) => row.title);
 }
 
@@ -311,4 +314,34 @@ test("a tooltip removed and re-created gets its rows once", () => {
   assert.equal(recreated.querySelectorAll(`[${MARKER_ATTRIBUTE}]`).length, 2);
   assert.equal(rowByText(recreated, "Grade").getAttribute("transform"), "translate(6, 70)");
   assert.equal(background(recreated).getAttribute("height"), "88");
+});
+
+test("after disconnect Strava's writes are not reported; a later show tracks again", async () => {
+  const { tooltip, stravaChanges } = setUp(ACTIVITY_TOOLTIP);
+  const tooltipRows = createTooltipRows(() => {
+    stravaChanges.count += 1;
+  });
+  tooltipRows.show(tooltip, GAIN_AND_LOSS);
+  tooltipRows.disconnect();
+  background(tooltip).setAttribute("height", "111");
+  await deliverMutationRecords();
+  assert.equal(stravaChanges.count, 0);
+
+  tooltipRows.show(tooltip, GAIN_AND_LOSS);
+  assert.equal(background(tooltip).getAttribute("height"), "111");
+  // Observing again: Strava's write repeating our value becomes the base.
+  background(tooltip).setAttribute("height", "111");
+  await deliverMutationRecords();
+  assert.equal(stravaChanges.count, 1);
+  tooltipRows.show(tooltip, GAIN_AND_LOSS);
+  assert.equal(background(tooltip).getAttribute("height"), "143");
+});
+
+test("two instances showing the same tooltip shift it once", () => {
+  const { tooltip } = setUp(ACTIVITY_TOOLTIP);
+  createTooltipRows(() => undefined).show(tooltip, GAIN_AND_LOSS);
+  createTooltipRows(() => undefined).show(tooltip, GAIN_AND_LOSS);
+  assert.equal(rowByText(tooltip, "Grade").getAttribute("y"), "105");
+  assert.equal(background(tooltip).getAttribute("height"), "111");
+  assert.equal(tooltip.querySelectorAll(`[${MARKER_ATTRIBUTE}]`).length, 2);
 });

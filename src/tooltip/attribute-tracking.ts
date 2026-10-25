@@ -23,6 +23,8 @@ export interface AttributeTracker {
   ): void;
   /** Drop the records our own writes queued, so they never count as Strava's. */
   discardOwnWrites(): void;
+  /** Stop observing. A later setFromStravaValue observes again. */
+  disconnect(): void;
 }
 
 const BASE_ATTRIBUTE_PREFIX = `${MARKER_ATTRIBUTE}-base-`;
@@ -45,7 +47,7 @@ function noteBases(records: readonly MutationRecord[]): void {
 }
 
 export function createAttributeTracker(onStravaWrite: () => void): AttributeTracker {
-  const trackedAttributes = new WeakMap<Element, Set<string>>();
+  let trackedAttributes = new WeakMap<Element, Set<string>>();
   let observer: MutationObserver | null = null;
 
   function observerFor(element: Element): MutationObserver {
@@ -67,8 +69,12 @@ export function createAttributeTracker(onStravaWrite: () => void): AttributeTrac
       trackedAttributes.set(element, names);
     }
     names.add(attributeName);
+    // A stored base is kept: it was recorded from Strava's writes, while the
+    // current value may be one we (or another instance) wrote.
     const value = element.getAttribute(attributeName);
-    if (value !== null) element.setAttribute(baseAttribute(attributeName), value);
+    if (value !== null && !element.hasAttribute(baseAttribute(attributeName))) {
+      element.setAttribute(baseAttribute(attributeName), value);
+    }
     // Observing the same element again replaces its filter with the larger set.
     observerFor(element).observe(element, { attributes: true, attributeFilter: [...names] });
   }
@@ -92,6 +98,14 @@ export function createAttributeTracker(onStravaWrite: () => void): AttributeTrac
     },
     discardOwnWrites: () => {
       observer?.takeRecords();
+    },
+    disconnect: () => {
+      if (!observer) return;
+      // Anything still queued is Strava's: show() discards our own writes.
+      noteBases(observer.takeRecords());
+      observer.disconnect();
+      observer = null;
+      trackedAttributes = new WeakMap();
     },
   };
 }

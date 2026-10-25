@@ -8,15 +8,15 @@ const SIX_KILOMETRES: ShownDistance = { metres: 6000, unit: "km", resolutionMetr
 
 interface ChartLayout {
   /** Left edge of each vertical line, in page pixels. */
-  lineLefts: readonly number[];
+  lineLeftsPixels: readonly number[];
   lineClasses?: readonly string[];
-  tooltipLeft: number;
+  tooltipLeftPixels: number;
 }
 
 function setUpChart(layout: ChartLayout): { chart: SVGSVGElement; tooltip: Element } {
-  const lines = layout.lineLefts
+  const lines = layout.lineLeftsPixels
     .map(
-      (_left, index) =>
+      (_leftPixels, index) =>
         `<line class="${layout.lineClasses?.[index] ?? ""}" x1="5" x2="5" y1="0" y2="180"></line>`,
     )
     .join("");
@@ -34,29 +34,29 @@ function setUpChart(layout: ChartLayout): { chart: SVGSVGElement; tooltip: Eleme
   setBoundingRect(zeroTick, { left: 381, top: 190, width: 1, height: 10 });
   setBoundingRect(twoKilometreTick, { left: 486.32, top: 190, width: 1, height: 10 });
   document.querySelectorAll("line").forEach((line, index) => {
-    setBoundingRect(line, { left: layout.lineLefts[index] ?? 0, top: 10, width: 1, height: 180 });
+    setBoundingRect(line, { left: layout.lineLeftsPixels[index] ?? 0, top: 10, width: 1, height: 180 });
   });
-  setBoundingRect(tooltip, { left: layout.tooltipLeft, top: 20, width: 110, height: 60 });
+  setBoundingRect(tooltip, { left: layout.tooltipLeftPixels, top: 20, width: 110, height: 60 });
   return { chart, tooltip };
 }
 
 test("interpolates the distance under the crosshair from the axis ticks", () => {
-  const { chart, tooltip } = setUpChart({ lineLefts: [699.5], tooltipLeft: 705 });
+  const { chart, tooltip } = setUpChart({ lineLeftsPixels: [699.5], tooltipLeftPixels: 705 });
   const distanceMetres = crosshairDistance(chart, tooltip, SIX_KILOMETRES);
   assert.ok(distanceMetres !== null);
   assert.ok(Math.abs(distanceMetres - 6048) < 1, String(distanceMetres));
 });
 
 test("returns null when the only nearby line disagrees with the shown distance", () => {
-  const { chart, tooltip } = setUpChart({ lineLefts: [899.5], tooltipLeft: 905 });
+  const { chart, tooltip } = setUpChart({ lineLeftsPixels: [899.5], tooltipLeftPixels: 905 });
   assert.equal(crosshairDistance(chart, tooltip, SIX_KILOMETRES), null);
 });
 
 test("prefers a line marked as the crosshair over a nearer gridline", () => {
   const { chart, tooltip } = setUpChart({
-    lineLefts: [703, 699.5],
+    lineLeftsPixels: [703, 699.5],
     lineClasses: ["grid", "crosshair"],
-    tooltipLeft: 705,
+    tooltipLeftPixels: 705,
   });
   const distanceMetres = crosshairDistance(chart, tooltip, SIX_KILOMETRES);
   assert.ok(distanceMetres !== null);

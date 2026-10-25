@@ -16,6 +16,8 @@ export interface ExtraRow {
 export interface TooltipRows {
   /** Show exactly these extra rows under the tooltip's Elevation row. */
   show(tooltip: Element, rows: readonly ExtraRow[]): void;
+  /** Stop watching Strava's writes. A later show() starts watching again. */
+  disconnect(): void;
 }
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -54,14 +56,14 @@ function positionAttribute(row: Element): PositionAttribute {
   return row.hasAttribute("y") ? "y" : "transform";
 }
 
-function verticalPosition(attributeName: PositionAttribute, value: string | null): number {
+function verticalPositionPixels(attributeName: PositionAttribute, value: string | null): number {
   if (value === null) return NaN;
   if (attributeName === "y") return parseFloat(value);
   const match = TRANSLATE_PATTERN.exec(value);
   return match ? parseFloat(match[2]) : NaN;
 }
 
-function withVerticalPosition(
+function withVerticalPositionPixels(
   attributeName: PositionAttribute,
   value: string,
   positionPixels: number,
@@ -74,18 +76,18 @@ function withVerticalPosition(
   });
 }
 
-function horizontalPosition(row: Element): number {
+function horizontalPositionPixels(row: Element): number {
   const horizontal =
     row.getAttribute("x") ?? TRANSLATE_PATTERN.exec(row.getAttribute("transform") ?? "")?.[1];
   return parseFloat(horizontal ?? "0");
 }
 
-function offsetNumber(value: string, amount: number): string | null {
-  const number = parseFloat(value);
-  return Number.isFinite(number) ? String(number + amount) : null;
+function shiftedPixels(value: string, shiftPixels: number): string | null {
+  const valuePixels = parseFloat(value);
+  return Number.isFinite(valuePixels) ? String(valuePixels + shiftPixels) : null;
 }
 
-function renderedWidth(row: Element): number {
+function renderedWidthPixels(row: Element): number {
   return "getBBox" in row ? (row as SVGGraphicsElement).getBBox().width : 0;
 }
 
@@ -126,8 +128,8 @@ function showSvgRows(
   tracker: AttributeTracker,
 ): void {
   removeStaleRows(tooltip, rows);
-  const stravaPosition = (row: Element): number =>
-    verticalPosition(positionAttribute(row), tracker.stravaValue(row, positionAttribute(row)));
+  const stravaPositionPixels = (row: Element): number =>
+    verticalPositionPixels(positionAttribute(row), tracker.stravaValue(row, positionAttribute(row)));
   // Strava's visible rows, each with the position Strava gave it. A row with
   // no readable position can't be moved, so it is left alone.
   const stravaRows = [...tooltip.querySelectorAll("text")]
@@ -137,11 +139,11 @@ function showSvgRows(
         row.getAttribute("display") !== "none" &&
         row.textContent.trim() !== "",
     )
-    .map((row) => ({ row, positionPixels: stravaPosition(row) }))
+    .map((row) => ({ row, positionPixels: stravaPositionPixels(row) }))
     .filter(({ positionPixels }) => Number.isFinite(positionPixels));
   const attributeName = positionAttribute(elevationRow);
   const elevationValue = tracker.stravaValue(elevationRow, attributeName);
-  const elevationPositionPixels = verticalPosition(attributeName, elevationValue);
+  const elevationPositionPixels = verticalPositionPixels(attributeName, elevationValue);
   if (elevationValue === null || !Number.isFinite(elevationPositionPixels)) return;
   const rowSpacingPixels =
     stravaRows.length > 1
@@ -159,7 +161,11 @@ function showSvgRows(
       tooltip.append(row);
     }
     const positionPixels = elevationPositionPixels + rowSpacingPixels * (index + 1);
-    setIfChanged(row, attributeName, withVerticalPosition(attributeName, elevationValue, positionPixels));
+    setIfChanged(
+      row,
+      attributeName,
+      withVerticalPositionPixels(attributeName, elevationValue, positionPixels),
+    );
     setIfChanged(row, "display", display);
     fillRow(row, elevationRow, extra);
     return row;
@@ -170,17 +176,23 @@ function showSvgRows(
     if (positionPixels <= elevationPositionPixels) continue;
     const rowAttribute = positionAttribute(row);
     tracker.setFromStravaValue(row, rowAttribute, (base) =>
-      withVerticalPosition(rowAttribute, base, verticalPosition(rowAttribute, base) + shiftPixels),
+      withVerticalPositionPixels(
+        rowAttribute,
+        base,
+        verticalPositionPixels(rowAttribute, base) + shiftPixels,
+      ),
     );
   }
 
   const background = tooltip.querySelector("rect");
   if (!background) return;
-  tracker.setFromStravaValue(background, "height", (base) => offsetNumber(base, shiftPixels));
+  tracker.setFromStravaValue(background, "height", (base) => shiftedPixels(base, shiftPixels));
   // The Elevation row's inset from the box's left edge, kept on both sides.
-  const paddingPixels = horizontalPosition(elevationRow) - parseFloat(background.getAttribute("x") ?? "0");
+  const paddingPixels =
+    horizontalPositionPixels(elevationRow) - parseFloat(background.getAttribute("x") ?? "0");
   const neededWidthPixels = Math.ceil(
-    Math.max(...[...stravaRows.map(({ row }) => row), ...shownRows].map(renderedWidth)) + paddingPixels * 2,
+    Math.max(...[...stravaRows.map(({ row }) => row), ...shownRows].map(renderedWidthPixels)) +
+      paddingPixels * 2,
   );
   tracker.setFromStravaValue(background, "width", (base) => {
     const stravaWidthPixels = parseFloat(base);
@@ -219,6 +231,9 @@ export function createTooltipRows(onStravaChange: () => void): TooltipRows {
       } finally {
         tracker.discardOwnWrites();
       }
+    },
+    disconnect: () => {
+      tracker.disconnect();
     },
   };
 }
