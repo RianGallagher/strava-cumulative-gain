@@ -20,7 +20,11 @@ const gpx = `<gpx><trk><trkseg>
 <trkpt lat="53.001" lon="-6.0"><ele>40</ele></trkpt>
 </trkseg></trk></gpx>`;
 
-const chartHtml = "<div class='elevation-chart-wrapper'><div><svg id='chart'></svg></div></div>";
+const axisTicks =
+  "<g><text>0.0 km</text><text>1.5 km</text></g><g><text>200 m</text><text>1,250 m</text></g>";
+const chartHtml = `<div class='elevation-chart-wrapper'><div><svg id='chart'>${axisTicks}</svg></div></div>`;
+// A wide SVG on the page that is not the elevation chart, such as a map overlay.
+const overlayHtml = "<div id='map'><svg id='overlay'><text>Start</text><text>12 km</text></svg></div>";
 
 function routePage(fixture: PageFixture): StravaPage {
   const page = detectPage("/routes/7", fixture.dependencies);
@@ -93,6 +97,23 @@ test("without chart props or embedded data the GPX export is loaded once", async
 
 test("embedded data for another route falls through to the GPX export", async () => {
   await gpxFallback(nextDataScript({ ...embeddedRoute, id: 8 }));
+});
+
+test("an SVG that is not the elevation chart gets no embedded profile", () => {
+  const fixture = pageFixture(overlayHtml + nextDataScript(embeddedRoute), { [GPX_URL]: gpx });
+  const page = routePage(fixture);
+  page.prepare(() => undefined);
+  assert.equal(page.profileSource(svgById(fixture.document, "overlay")), null);
+});
+
+test("an SVG that is not the elevation chart never starts the GPX download", async () => {
+  const fixture = pageFixture(overlayHtml + nextDataScript({ ...embeddedRoute, id: 8 }), { [GPX_URL]: gpx });
+  const page = routePage(fixture);
+  page.prepare(() => undefined);
+  assert.equal(page.profileSource(svgById(fixture.document, "overlay")), null);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(page.profileSource(svgById(fixture.document, "overlay")), null);
+  assert.deepEqual(fixture.requestedUrls, []);
 });
 
 test("climbs go before the Segments section, copying its classes", () => {

@@ -20,6 +20,18 @@ function createEmbeddedRouteReader(document: Document, routeId: string): () => P
   };
 }
 
+const DISTANCE_TICK = /^\s*[\d.,]+\s*(km|mi)\s*$/;
+const ELEVATION_TICK = /^\s*[\d.,]+\s*(m|ft)\s*$/;
+
+// The fallbacks carry the route's profile but not which SVG it belongs to,
+// so they only go to an SVG with both distance and elevation axis ticks.
+function looksLikeElevationChart(chart: SVGSVGElement): boolean {
+  const labels = [...chart.querySelectorAll("text")].map((textElement) => textElement.textContent);
+  return (
+    labels.some((label) => DISTANCE_TICK.test(label)) && labels.some((label) => ELEVATION_TICK.test(label))
+  );
+}
+
 function findSegmentsHeading(document: Document): HTMLHeadingElement | undefined {
   return [...document.querySelectorAll("h3")].find((heading) => heading.textContent.trim() === "Segments");
 }
@@ -43,7 +55,8 @@ export function createRoutePage(routeId: string, dependencies: PageDependencies)
     prepare(onReady) {
       notifyReady ??= onReady;
     },
-    // The chart's own props, else the embedded page data, else the GPX export.
+    // The chart's own props, else (for the elevation chart only) the embedded
+    // page data, else the GPX export.
     // The chart's ancestors don't hold the legs; the embedded data does, along
     // with Strava's headline total.
     profileSource(chart) {
@@ -60,6 +73,7 @@ export function createRoutePage(routeId: string, dependencies: PageDependencies)
           ...(headlineGainMetres === undefined ? {} : { headlineGainMetres }),
         };
       }
+      if (!looksLikeElevationChart(chart)) return null;
       if (embedded !== null) return embedded;
       gpxLoader.start(() => {
         notifyReady?.();
