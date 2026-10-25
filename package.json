@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test \"test/**/*.test.ts\"",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"test/**/*.test.ts\"",
     "test:legacy": "node --test test/*.test.js",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "package": "npm run check && sh scripts/package.sh"

@@ -8,7 +8,7 @@ Run `npm run check` (typecheck, lint, format check, tests). Commit only when it 
 
 ## Naming
 
-Every identifier is a full word, at least 3 characters, in src, tests and scripts. ESLint enforces the length and a denylist of abbreviations (`el`, `elem`, `btn`, `idx`, `val`, `err`, `dist`, `elev`, `pts`, ...). Write `element`, `index`, `error`, `distanceMetres`.
+Every identifier is a full word, at least 3 characters, in src, tests and scripts. ESLint enforces the length and a denylist of abbreviations (`el`, `rect`, `elem`, `btn`, `idx`, `val`, `err`, `dist`, `elev`, `pts`, ...). Write `element`, `index`, `error`, `distanceMetres`.
 
 A number carries its unit in the name: `distanceMetres`, `durationSeconds`, `gainFeet`.
 
@@ -21,6 +21,10 @@ Only `src/content-entry.ts` touches `document`, `window`, `location`, `localStor
 - Keep files under about 250 lines; split by responsibility when one grows past that.
 - Import relatively with the `.ts` extension: `import { start } from "./main.ts"`.
 - Keep the stored setting keys and the `data-cumulative-gain` marker attribute unchanged.
+
+## Temporary
+
+The `test` script passes `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON`; remove it once `"type": "module"` lands in package.json (Task 11).
 
 ## Tests
 

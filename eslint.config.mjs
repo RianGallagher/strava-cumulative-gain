@@ -1,8 +1,9 @@
+// Temporary: this file is .mjs and the package.json "test" script passes a warning flag, both until Task 11 adds "type": "module".
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 const deniedAbbreviations =
-  "lo hi el elem attr attrs btn sig opts res cur num idx val tmp cfg ctx evt err elev dist ele pts nd cs fn cb arr obj str".split(
+  "lo hi el elem attr attrs btn sig opts res cur num idx val tmp cfg ctx evt err elev dist ele pts nd cs rect fn cb arr obj str".split(
     " ",
   );
 

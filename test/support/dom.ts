@@ -26,8 +26,8 @@ export function createTestDocument(html: string, url = "https://www.strava.com/"
   return { window, document: window.document };
 }
 
-export function setBoundingRect(element: Element, rect: RectangleInput): void {
-  const { left, top, width, height } = rect;
+export function setBoundingRect(element: Element, rectangle: RectangleInput): void {
+  const { left, top, width, height } = rectangle;
   element.getBoundingClientRect = () => ({
     x: left,
     y: top,
