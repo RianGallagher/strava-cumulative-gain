@@ -161,10 +161,12 @@ before submitting.
 pass: the content script is now `build/content.js`, bundled from the
 TypeScript sources (run `npm run package`; the zip holds the manifest, the
 bundle and the icons). Behaviour is unchanged apart from fixes: route data
-falls back to the embedded page data, then GPX, when the chart's props can't
+falls back to the embedded page data, then GPX, when the chart's data can't
 be read; failed loads retry; malformed activity streams are ignored; a
-headline total that appears late is picked up; and after a client-side
-navigation only the new page's data is shown.
+headline total that appears late is picked up; the top of every climb is now
+counted (gain no longer falls short by up to the 1 m threshold at each summit
+before it is scaled to Strava's total); and after a client-side navigation
+only the new page's data is shown.
 
 ## Review Notes
 

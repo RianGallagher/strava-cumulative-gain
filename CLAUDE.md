@@ -4,7 +4,13 @@ Chrome MV3 extension, strict TypeScript, bundled by esbuild into `build/content.
 
 ## Before every commit
 
-Run `npm run check` (typecheck, lint, format check, tests). Commit only when it passes.
+Run `npm run check` (typecheck, lint, format check, tests). Commit only when it passes. Node 24 or later.
+
+## TypeScript projects
+
+- `tsconfig.json` checks `src/` with the DOM libraries only (`"types": []`), so extension code can't use Node APIs.
+- `test/tsconfig.json` extends it, adds Node's types and checks `test/` with `src/`.
+- `npm run typecheck` runs both.
 
 ## Naming
 
@@ -23,7 +29,7 @@ Only `src/content-entry.ts` touches `document`, `window`, `location`, `localStor
 
 - Keep files under about 250 lines; split by responsibility when one grows past that.
 - Import relatively with the `.ts` extension: `import { start } from "./main.ts"`.
-- Keep the stored setting keys and the `data-cumulative-gain` marker attribute unchanged.
+- Keep the stored setting keys and the `data-cumulative-gain` marker attribute (`src/dom-markers.ts`) unchanged.
 
 ## Tests
 

@@ -62,6 +62,13 @@ Rules: only `main.ts` and `settings.ts` read globals (`document`, `window`,
 dependencies as parameters and creates nodes via `element.ownerDocument`.
 Files stay under ~250 lines.
 
+> As built (ruling R1): a separate `src/content-entry.ts` is the bundle's entry
+> and the only module that reads globals; `main.ts` exports `start(environment)`
+> so tests can drive it, and `settings.ts` takes its storage as a parameter.
+> ESLint's `no-restricted-globals` enforces this for the rest of `src/`. The
+> marker attribute and other shared DOM names live in `src/dom-markers.ts`,
+> and `strava/chart-props.ts` became `strava/chart-properties.ts`.
+
 ### Seams
 - **StravaPage** (three real adapters: activity, route, route builder) holds
   everything page-specific: where profile data comes from, where the climbs

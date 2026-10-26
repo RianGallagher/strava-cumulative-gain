@@ -18,6 +18,8 @@ function readPoint(pointElement: Element): ElevationPoint | null {
 
 // Fallback for a route whose page data is unavailable: the GPX export, with
 // distances computed along the track. Points without elevation are skipped.
+// A non-OK response gives null; a network failure rejects. The loader
+// retries both.
 export async function fetchRouteGpx(
   routeId: string,
   fetchFunction: typeof fetch,
