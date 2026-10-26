@@ -35,7 +35,7 @@ describe("renderSplitsToggle", () => {
     const button = requireElement<HTMLButtonElement>(table, "th button[data-cumulative-gain='split-toggle']");
     assert.equal(button.type, "button");
     assert.equal(button.getAttribute("aria-pressed"), "false");
-    assert.equal(button.style.cssText, "all: unset; cursor: pointer;");
+    assert.doesNotMatch(button.getAttribute("style") ?? "", /all:/);
     assert.equal(requireElement(button, "[aria-hidden='true']").textContent, "Elev ⇅");
     assert.match(button.textContent, /Show gain and loss per split/);
     button.click();
@@ -56,10 +56,15 @@ describe("renderSplitsToggle", () => {
     renderSplitsToggle(table, model, 2500, { view: "net", onToggle: noop });
     const styles = document.head.querySelectorAll("style[data-cumulative-gain]");
     assert.equal(styles.length, 1);
-    assert.match(
-      styles[0].textContent,
-      /:focus-visible \{ outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; \}/,
-    );
+    const css = styles[0].textContent;
+    const selector = String.raw`button\[data-cumulative-gain="split-toggle"\]`;
+    const base = new RegExp(`${selector} \\{ all: unset; cursor: pointer; \\}`).exec(css);
+    const focus = new RegExp(
+      `${selector}:focus-visible \\{ outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; \\}`,
+    ).exec(css);
+    assert.ok(base, "base reset rule present");
+    assert.ok(focus, "focus-visible rule present");
+    assert.ok(base.index < focus.index, "reset comes before the focus rule");
   });
 
   it("writes gain and loss per 1000 m split, ending at the chart end", () => {

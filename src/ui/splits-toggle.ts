@@ -18,12 +18,22 @@ const VISUALLY_HIDDEN_STYLE =
 // The button outlives renders; it always reports to the newest handler.
 const latestHandlers = new WeakMap<HTMLButtonElement, SplitsToggleOptions>();
 
-/** `all: unset` removes the browser's focus ring too; keyboard users need it. */
-function addFocusRingStyle(document: Document): void {
+/**
+ * Strava styles every <button> (inline-flex, 34 px min-height), which pushed the
+ * label below the other headers, so the reset removes it all. `all: unset` also
+ * removes the browser's focus ring, so the focus rule restores one. The reset
+ * lives here, not inline, and comes first: an inline `all` would beat this
+ * stylesheet's outline. Both selectors are (0,1,1) / (0,2,1), above Strava's
+ * element and single-class button rules; the focus rule is higher and later.
+ */
+function addToggleStyle(document: Document): void {
   if (document.querySelector(`style[${MARKER_ATTRIBUTE}]`)) return;
   const style = document.createElement("style");
   style.setAttribute(MARKER_ATTRIBUTE, "style");
-  style.textContent = `button[${MARKER_ATTRIBUTE}="split-toggle"]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }`;
+  style.textContent = [
+    `${BUTTON_SELECTOR} { all: unset; cursor: pointer; }`,
+    `${BUTTON_SELECTOR}:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }`,
+  ].join("\n");
   document.head.append(style);
 }
 
@@ -35,11 +45,7 @@ function createButton(header: HTMLTableCellElement): HTMLButtonElement {
   button.type = "button";
   button.setAttribute(MARKER_ATTRIBUTE, "split-toggle");
   button.title = "Switch between net elevation and gain / loss for each split";
-  // Strava styles every <button> (inline-flex, 34 px min-height), which pushed
-  // the label below the other headers. Reset everything so it reads as plain
-  // header text; the injected style restores a focus ring.
-  button.style.cssText = "all: unset; cursor: pointer;";
-  addFocusRingStyle(document);
+  addToggleStyle(document);
   button.addEventListener("click", () => {
     const options = latestHandlers.get(button);
     if (options) options.onToggle(options.view === "net" ? "gain-loss" : "net");
