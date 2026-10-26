@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { legCheckpoints } from "../../src/math/elevation-curve.ts";
 import { readEmbeddedRoute } from "../../src/strava/embedded-route.ts";
 import { createTestDocument } from "../support/dom.ts";
 
@@ -56,4 +57,27 @@ test("missing script, bad JSON or bad elevation give null", () => {
   const broken = createTestDocument('<script id="__NEXT_DATA__">{nope</script>').document;
   assert.equal(readEmbeddedRoute(broken, "123"), null);
   assert.equal(readEmbeddedRoute(documentWithRoute({ id: 123, elevation: [["a", 1]] }), "123"), null);
+});
+
+test("one path without a length still gives the legs, and their checkpoints", () => {
+  const legsWithOddPath = [
+    { paths: [{ length: 100, elevationGain: 4 }, { elevationGain: 1 }] },
+    { paths: [{ length: 100, elevationGain: 3 }] },
+  ];
+  const route = {
+    id: 123,
+    elevation: [
+      [0, 10],
+      [200, 15],
+    ],
+    legs: legsWithOddPath,
+  };
+  const source = readEmbeddedRoute(documentWithRoute(route), "123");
+  assert.ok(source?.legs);
+  assert.deepEqual(source.legs, legsWithOddPath);
+  assert.deepEqual(legCheckpoints(source.legs, 200, "elevationGain"), [
+    { distanceMetres: 0, cumulativeMetres: 0 },
+    { distanceMetres: 100, cumulativeMetres: 5 },
+    { distanceMetres: 200, cumulativeMetres: 8 },
+  ]);
 });

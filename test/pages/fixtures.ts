@@ -23,19 +23,24 @@ export function recordingFetch(bodiesByUrlPrefix: Record<string, string>): Recor
 export interface PageFixture extends TestDocument {
   dependencies: PageDependencies;
   requestedUrls: string[];
+  /** The time the page sees; tests move it forward by hand. */
+  clock: { nowMilliseconds: number };
 }
 
 // Retries are never scheduled, so a failed load stays failed and no timer outlives the test.
 export function pageFixture(html: string, bodiesByUrlPrefix: Record<string, string> = {}): PageFixture {
   const testDocument = createTestDocument(html);
   const { fetch: fetchFunction, requestedUrls } = recordingFetch(bodiesByUrlPrefix);
+  const clock = { nowMilliseconds: 0 };
   return {
     ...testDocument,
     requestedUrls,
+    clock,
     dependencies: {
       document: testDocument.document,
       fetch: fetchFunction,
       schedule: () => undefined,
+      nowMilliseconds: () => clock.nowMilliseconds,
     },
   };
 }

@@ -1,13 +1,11 @@
 import type { NumberedClimb } from "../elevation-model.ts";
-import { MARKER_ATTRIBUTE } from "../settings.ts";
+import { MARKER_ATTRIBUTE, SIGNATURE_ATTRIBUTE, SVG_NAMESPACE } from "../dom-markers.ts";
 import type { DistanceUnit, ElevationUnit } from "../units.ts";
 
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const BAND_FILL = "rgb(252, 82, 0)"; // Strava orange
 const BAND_OPACITY = "0.12";
 const BAND_OPACITY_HIGHLIGHTED = "0.3";
 const BANDS_SELECTOR = `g[${MARKER_ATTRIBUTE}="bands"]`;
-const SIGNATURE_ATTRIBUTE = "data-cumulative-gain-signature";
 const AXIS_LABEL = /^\s*[\d,.]+\s*(km|mi|m|ft)\s*$/;
 const LABEL_BASELINE_PIXELS = 11;
 

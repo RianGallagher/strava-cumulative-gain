@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSettings, MARKER_ATTRIBUTE } from "../src/settings.ts";
+import { createSettings } from "../src/settings.ts";
 
 class MemoryStorage implements Storage {
   private readonly entries = new Map<string, string>();
@@ -34,10 +34,6 @@ function createFakeConsole(): { log: (...values: unknown[]) => void; calls: unkn
   const calls: unknown[][] = [];
   return { log: (...values) => calls.push(values), calls };
 }
-
-test("marker attribute", () => {
-  assert.equal(MARKER_ATTRIBUTE, "data-cumulative-gain");
-});
 
 test("defaults to climbs off and net splits", () => {
   const settings = createSettings(new MemoryStorage(), createFakeConsole());

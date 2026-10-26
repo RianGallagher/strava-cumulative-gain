@@ -29,6 +29,8 @@ export interface PageDependencies {
   document: Document;
   fetch: typeof fetch;
   schedule: (callback: () => void, delayMilliseconds: number) => void;
+  /** A monotonic clock, for throttling costly searches. */
+  nowMilliseconds: () => number;
 }
 
 const ACTIVITY_PATH = /^\/activities\/(\d+)/;

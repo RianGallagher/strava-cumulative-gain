@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MARKER_ATTRIBUTE } from "../../src/settings.ts";
+import { MARKER_ATTRIBUTE } from "../../src/dom-markers.ts";
 import {
   createTooltipRows,
   findElevationRow,
@@ -236,6 +236,21 @@ test("Strava removing a tracked attribute never leads to NaN", () => {
   tooltipRows.show(tooltip, GAIN_AND_LOSS);
   assert.equal(background(tooltip).getAttribute("height"), "111");
 });
+
+for (const [description, emptyXSelector] of [
+  ["the box", "rect"],
+  ["the Elevation row", "#infobox-text-altitude"],
+] as const) {
+  test(`an empty x on ${description} never writes a NaN width`, () => {
+    const { tooltip } = setUp(ACTIVITY_TOOLTIP);
+    const element = tooltip.querySelector(emptyXSelector);
+    assert.ok(element);
+    element.setAttribute("x", "");
+    createTooltipRows(() => undefined).show(tooltip, GAIN_AND_LOSS);
+    assert.equal(background(tooltip).getAttribute("width"), "150");
+    assert.equal(background(tooltip).getAttribute("height"), "111");
+  });
+}
 
 test("a label containing a digit is never taken for the value", () => {
   const { tooltip } = setUp(ACTIVITY_TOOLTIP);

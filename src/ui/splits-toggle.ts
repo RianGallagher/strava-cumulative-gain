@@ -1,5 +1,6 @@
 import type { ElevationModel } from "../elevation-model.ts";
-import { MARKER_ATTRIBUTE, type SplitsView } from "../settings.ts";
+import { MARKER_ATTRIBUTE } from "../dom-markers.ts";
+import type { SplitsView } from "../settings.ts";
 import { METRES_PER_UNIT, type DistanceUnit } from "../units.ts";
 
 export interface SplitsToggleOptions {
@@ -7,9 +8,9 @@ export interface SplitsToggleOptions {
   onToggle(view: SplitsView): void;
 }
 
-const VIEW_ATTRIBUTE = "data-cumulative-gain-view";
-const NET_HTML_ATTRIBUTE = "data-cumulative-gain-net";
-const SHOWN_HTML_ATTRIBUTE = "data-cumulative-gain-html";
+const VIEW_ATTRIBUTE = `${MARKER_ATTRIBUTE}-view`;
+const NET_HTML_ATTRIBUTE = `${MARKER_ATTRIBUTE}-net`;
+const SHOWN_HTML_ATTRIBUTE = `${MARKER_ATTRIBUTE}-html`;
 const BUTTON_SELECTOR = `button[${MARKER_ATTRIBUTE}="split-toggle"]`;
 const VISUALLY_HIDDEN_STYLE =
   "position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; white-space: nowrap; margin: -1px; padding: 0; border: 0;";

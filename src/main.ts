@@ -3,7 +3,8 @@
 // fills every profile tooltip from the current page's data.
 import { cachedElevationModel, type ProfileSource } from "./elevation-model.ts";
 import { detectPage, type StravaPage } from "./pages/page.ts";
-import { createSettings, MARKER_ATTRIBUTE, type Settings } from "./settings.ts";
+import { MARKER_ATTRIBUTE } from "./dom-markers.ts";
+import { createSettings, type Settings } from "./settings.ts";
 import { crosshairDistance } from "./tooltip/crosshair.ts";
 import {
   createTooltipRows,
@@ -24,6 +25,7 @@ export interface EnvironmentWindow {
   cancelAnimationFrame(handle: number): void;
   setTimeout(callback: () => void, delayMilliseconds: number): number;
   clearTimeout(handle: number): void;
+  performance: Pick<Performance, "now">;
   console: Pick<Console, "log">;
 }
 
@@ -59,7 +61,7 @@ function chartRange(source: ProfileSource): { chartStartMetres: number; chartEnd
   };
 }
 
-// Bands, the climbs panel and (on an activity) the splits toggle for one chart.
+// Bands, the climbs panel and (where the page has a splits table) the splits toggle for one chart.
 function decorateChart(pass: Pass, chart: SVGSVGElement): void {
   const { page, settings, schedule } = pass;
   if (chart.getBoundingClientRect().width < MINIMUM_CHART_WIDTH_PIXELS) return;
@@ -83,7 +85,7 @@ function decorateChart(pass: Pass, chart: SVGSVGElement): void {
     });
   }
 
-  const table = page.kind === "activity" ? page.splitsTable() : null;
+  const table = page.splitsTable();
   if (table) {
     renderSplitsToggle(table, model, chartEndMetres, {
       view: settings.splitsView(),
@@ -147,7 +149,12 @@ export function start(environment: Environment): Running {
 
   const tooltipRows = createTooltipRows(schedule);
 
-  function scheduleRetry(callback: () => void, delayMilliseconds: number): void {
+  // Each page adapter gets its own number; a load that fails after its page
+  // was replaced (or after stop) schedules nothing.
+  let pageNumber = 0;
+
+  function scheduleRetry(owningPageNumber: number, callback: () => void, delayMilliseconds: number): void {
+    if (stopped || owningPageNumber !== pageNumber) return;
     const handle = window.setTimeout(() => {
       pendingRetries.delete(handle);
       callback();
@@ -155,11 +162,27 @@ export function start(environment: Environment): Running {
     pendingRetries.add(handle);
   }
 
-  // A client-side navigation gets a fresh adapter, so no data outlives its page.
+  function clearRetries(): void {
+    for (const handle of pendingRetries) window.clearTimeout(handle);
+    pendingRetries.clear();
+  }
+
+  // A client-side navigation gets a fresh adapter, so no data (and no
+  // pending retry) outlives its page.
   function currentPage(): StravaPage | null {
     if (location.pathname !== activePathname) {
+      clearRetries();
+      pageNumber += 1;
+      const owningPageNumber = pageNumber;
       activePathname = location.pathname;
-      activePage = detectPage(activePathname, { document, fetch: fetchFunction, schedule: scheduleRetry });
+      activePage = detectPage(activePathname, {
+        document,
+        fetch: fetchFunction,
+        schedule: (callback, delayMilliseconds) => {
+          scheduleRetry(owningPageNumber, callback, delayMilliseconds);
+        },
+        nowMilliseconds: () => window.performance.now(),
+      });
     }
     return activePage;
   }
@@ -204,8 +227,7 @@ export function start(environment: Environment): Running {
       tooltipRows.disconnect();
       if (frameHandle !== null) window.cancelAnimationFrame(frameHandle);
       frameHandle = null;
-      for (const handle of pendingRetries) window.clearTimeout(handle);
-      pendingRetries.clear();
+      clearRetries();
     },
   };
 }

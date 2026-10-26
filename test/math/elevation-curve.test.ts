@@ -27,6 +27,22 @@ test("the top of a climb under the threshold is still counted", () => {
   assert.equal(cumulativeClimb([0, 6, 9, 3], 5).at(-1), 9);
 });
 
+test("a dip smaller than the threshold keeps the climb going", () => {
+  assert.equal(cumulativeClimb([0, 10, 6, 12], 5).at(-1), 12);
+});
+
+test("a dip of exactly the threshold ends the climb, so the next rise counts in full", () => {
+  assert.equal(cumulativeClimb([0, 10, 5, 12], 5).at(-1), 17);
+});
+
+test("a rise of exactly the threshold counts", () => {
+  assert.deepEqual(cumulativeClimb([0, 5], 5), [0, 5]);
+});
+
+test("threshold 0 sums the rises and ignores flat steps", () => {
+  assert.deepEqual(cumulativeClimb([0, 0, 3, 3, 1, 1, 4], 0), [0, 0, 3, 3, 3, 3, 6]);
+});
+
 test("small oscillation around a flat line is still ignored", () => {
   assert.equal(cumulativeClimb([100, 101, 100, 101], 2).at(-1), 0);
 });

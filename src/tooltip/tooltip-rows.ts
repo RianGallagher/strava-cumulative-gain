@@ -2,7 +2,7 @@
 // Three tooltip shapes are handled: the activity chart (D3 SVG, rows placed
 // with y="41"), the route charts (React SVG, rows placed with
 // transform="translate(6, 22)") and HTML tooltips (<div> rows).
-import { MARKER_ATTRIBUTE } from "../settings.ts";
+import { MARKER_ATTRIBUTE, SVG_NAMESPACE } from "../dom-markers.ts";
 import { createAttributeTracker, type AttributeTracker } from "./attribute-tracking.ts";
 import { fillRow } from "./row-text.ts";
 import { isProfileTooltip } from "./tooltip-text.ts";
@@ -20,7 +20,6 @@ export interface TooltipRows {
   disconnect(): void;
 }
 
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const DEFAULT_ROW_SPACING_PIXELS = 16;
 const TRANSLATE_PATTERN = /translate\(\s*([-\d.]+)[\s,]+([-\d.]+)\s*\)/;
 
@@ -82,9 +81,13 @@ function horizontalPositionPixels(row: Element): number {
   return parseFloat(horizontal ?? "0");
 }
 
+// Null (so nothing is written) unless the result is a finite number.
+function finitePixels(pixels: number): string | null {
+  return Number.isFinite(pixels) ? String(pixels) : null;
+}
+
 function shiftedPixels(value: string, shiftPixels: number): string | null {
-  const valuePixels = parseFloat(value);
-  return Number.isFinite(valuePixels) ? String(valuePixels + shiftPixels) : null;
+  return finitePixels(parseFloat(value) + shiftPixels);
 }
 
 function renderedWidthPixels(row: Element): number {
@@ -196,7 +199,9 @@ function showSvgRows(
   );
   tracker.setFromStravaValue(background, "width", (base) => {
     const stravaWidthPixels = parseFloat(base);
-    return Number.isFinite(stravaWidthPixels) ? String(Math.max(stravaWidthPixels, neededWidthPixels)) : null;
+    // An unreadable x leaves the needed width unknown: keep Strava's.
+    if (!Number.isFinite(neededWidthPixels)) return finitePixels(stravaWidthPixels);
+    return finitePixels(Math.max(stravaWidthPixels, neededWidthPixels));
   });
 }
 

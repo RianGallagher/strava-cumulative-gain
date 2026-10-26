@@ -15,14 +15,12 @@ export function isProfileArray(value: unknown): value is number[] {
   return isNumberArray(value) && value.length >= 2;
 }
 
-function isRoutePath(value: unknown): boolean {
-  return isRecord(value) && typeof value["length"] === "number";
-}
-
+// As strict as the legacy script: one odd path (say, without a length) must
+// not drop every leg; legCheckpoints counts a missing length as 0 m.
 export function isLegArray(value: unknown): value is RouteLeg[] {
   return (
     Array.isArray(value) &&
     value.length > 0 &&
-    value.every((leg) => isRecord(leg) && Array.isArray(leg["paths"]) && leg["paths"].every(isRoutePath))
+    value.every((leg) => isRecord(leg) && Array.isArray(leg["paths"]) && leg["paths"].every(isRecord))
   );
 }

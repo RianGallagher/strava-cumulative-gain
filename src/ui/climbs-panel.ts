@@ -1,6 +1,6 @@
 import type { NumberedClimb } from "../elevation-model.ts";
 import type { ClimbsPlacement } from "../pages/page.ts";
-import { MARKER_ATTRIBUTE } from "../settings.ts";
+import { MARKER_ATTRIBUTE, SIGNATURE_ATTRIBUTE } from "../dom-markers.ts";
 import { formatDistance, formatDuration, formatElevation, formatGrade, METRES_PER_UNIT } from "../units.ts";
 import { chartUnits, highlightClimbBand, type ChartUnits } from "./climb-bands.ts";
 
@@ -11,7 +11,6 @@ export interface ClimbsPanelOptions {
 
 const CHECKBOX_ID = "cumulative-gain-show-climbs";
 const HEADING_ID = "cumulative-gain-climbs-heading";
-const SIGNATURE_ATTRIBUTE = "data-cumulative-gain-signature";
 const LABEL_STYLE =
   "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6d6d78; cursor: pointer; user-select: none;";
 const NO_VALUE = "–";

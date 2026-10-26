@@ -1,5 +1,3 @@
-export const MARKER_ATTRIBUTE = "data-cumulative-gain";
-
 export type SplitsView = "net" | "gain-loss";
 
 export interface Settings {

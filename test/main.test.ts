@@ -213,3 +213,38 @@ test("stop() disconnects every observer, so later changes are left alone", async
   assert.equal(background.getAttribute("height"), "63");
   window.close();
 });
+
+test("a load that fails after stop() schedules no retry", async () => {
+  let failLoad: () => void = () => undefined;
+  let fetchCount = 0;
+  const harness = startOn("/activities/42", activityHtml, {
+    fetch: () => {
+      fetchCount += 1;
+      return new Promise<Response>((resolve) => {
+        failLoad = () => {
+          resolve(new Response("", { status: 404 }));
+        };
+      });
+    },
+  });
+  const { window } = harness;
+  await waitFor(window, () => fetchCount === 1, "the streams request");
+
+  harness.stop();
+  failLoad();
+  await flushFrames(window);
+  assert.equal(harness.pendingTimeouts.size, 0);
+  window.close();
+});
+
+test("navigating to another page clears the previous page's retries", async () => {
+  // No streams body: every load fails and schedules a retry.
+  const harness = startOn("/activities/42", activityHtml);
+  const { document, window } = harness;
+  await waitFor(window, () => harness.pendingTimeouts.size === 1, "a retry of the streams");
+
+  window.history.pushState({}, "", "/dashboard");
+  document.body.append(document.createElement("p"));
+  await waitFor(window, () => harness.pendingTimeouts.size === 0, "the retry to be cleared");
+  finish(harness);
+});

@@ -73,6 +73,13 @@ test("headline gain with a thousands separator", async () => {
   assert.equal(page.profileSource(svgById(fixture.document, "chart"))?.headlineGainMetres, 1329);
 });
 
+test('an "Elevation Gain" label is the headline too', async () => {
+  const { fixture, page } = await loadedActivity(
+    "<div><div>Elevation Gain</div><strong>512 m</strong></div>",
+  );
+  assert.equal(page.profileSource(svgById(fixture.document, "chart"))?.headlineGainMetres, 512);
+});
+
 test("headline gain in feet is converted to metres", async () => {
   const { fixture, page } = await loadedActivity("<div><div>Elevation</div><strong>4,360 ft</strong></div>");
   const headlineGainMetres = page.profileSource(svgById(fixture.document, "chart"))?.headlineGainMetres;
@@ -94,6 +101,43 @@ test("the headline is read again on every call", async () => {
   const valueElement = fixture.document.querySelector("strong");
   assert.ok(valueElement);
   valueElement.textContent = "300 m";
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, 300);
+});
+
+test("once found, the headline label is kept rather than searched for again", async () => {
+  const { fixture, page } = await loadedActivity();
+  const chart = svgById(fixture.document, "chart");
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, 270);
+  // A search would now find this label first; the kept one still answers.
+  fixture.document.body.insertAdjacentHTML(
+    "afterbegin",
+    "<div><div>Elevation</div><strong>999 m</strong></div>",
+  );
+  fixture.clock.nowMilliseconds += 5000;
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, 270);
+});
+
+test("a headline that appears later is found, searching at most once a second", async () => {
+  const { fixture, page } = await loadedActivity("");
+  const chart = svgById(fixture.document, "chart");
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, undefined);
+  fixture.document.body.insertAdjacentHTML("afterbegin", plainHeadline);
+
+  fixture.clock.nowMilliseconds += 999;
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, undefined);
+  fixture.clock.nowMilliseconds += 1;
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, 270);
+});
+
+test("a replaced headline is found again straight away", async () => {
+  const { fixture, page } = await loadedActivity();
+  const chart = svgById(fixture.document, "chart");
+  assert.equal(page.profileSource(chart)?.headlineGainMetres, 270);
+  fixture.document.querySelector("div")?.remove();
+  fixture.document.body.insertAdjacentHTML(
+    "afterbegin",
+    "<div><div>Elevation</div><strong>300 m</strong></div>",
+  );
   assert.equal(page.profileSource(chart)?.headlineGainMetres, 300);
 });
 

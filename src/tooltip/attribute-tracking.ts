@@ -5,7 +5,7 @@
 // the same 32 px we added), and that write would be missed. So an observer
 // records every write Strava makes to an attribute we adjust, and our own
 // writes are discarded with takeRecords() before they are delivered.
-import { MARKER_ATTRIBUTE } from "../settings.ts";
+import { MARKER_ATTRIBUTE } from "../dom-markers.ts";
 
 export interface AttributeTracker {
   /** Record Strava's writes queued since the last call as the new bases. */

@@ -4,7 +4,7 @@ export interface Checkpoint {
 }
 
 export interface RoutePath {
-  length: number;
+  length?: number;
   elevationGain?: number;
   elevationLoss?: number;
 }
@@ -138,7 +138,9 @@ export function legCheckpoints(
   let hasField = false;
   for (const leg of legs) {
     for (const path of leg.paths) {
-      distanceMetres += path.length || 0;
+      // A malformed path (no numeric length) contributes 0 m.
+      const lengthMetres = path.length ?? 0;
+      distanceMetres += Number.isFinite(lengthMetres) ? lengthMetres : 0;
       const amountMetres = path[field];
       if (typeof amountMetres === "number") {
         cumulativeMetres += amountMetres;

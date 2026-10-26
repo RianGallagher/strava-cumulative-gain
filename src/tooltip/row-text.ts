@@ -1,6 +1,6 @@
 // Turns a copy of Strava's Elevation row into one of our rows by rewriting
 // only its text, so Strava's fonts, spacing and attributes are kept.
-import { MARKER_ATTRIBUTE } from "../settings.ts";
+import { MARKER_ATTRIBUTE } from "../dom-markers.ts";
 
 export interface RowText {
   label: string;
