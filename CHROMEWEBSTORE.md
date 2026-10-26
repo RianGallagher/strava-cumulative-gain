@@ -157,6 +157,15 @@ before submitting.
 |---------|------|---------|--------|
 | 1.0.0 | 2026-10-11 | First release: gain/loss tooltip rows, split gain/loss toggle, optional climbs | Draft |
 
+1.0.0 is still unpublished, so it stays 1.0.0 after the 2026-10-25 engineering
+pass: the content script is now `build/content.js`, bundled from the
+TypeScript sources (run `npm run package`; the zip holds the manifest, the
+bundle and the icons). Behaviour is unchanged apart from fixes: route data
+falls back to the embedded page data, then GPX, when the chart's props can't
+be read; failed loads retry; malformed activity streams are ignored; a
+headline total that appears late is picked up; and after a client-side
+navigation only the new page's data is shown.
+
 ## Review Notes
 
 ### Known Issues / Limitations

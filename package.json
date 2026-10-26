@@ -2,6 +2,7 @@
   "name": "cumulative-elevation-for-strava",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs --watch",
@@ -9,10 +10,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"test/**/*.test.ts\"",
-    "test:legacy": "node --test test/*.test.js",
+    "test": "node --test \"test/**/*.test.ts\"",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
-    "package": "npm run check && sh scripts/package.sh"
+    "package": "sh scripts/package.sh"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

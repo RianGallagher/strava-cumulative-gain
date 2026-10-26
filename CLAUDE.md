@@ -22,10 +22,6 @@ Only `src/content-entry.ts` touches `document`, `window`, `location`, `localStor
 - Import relatively with the `.ts` extension: `import { start } from "./main.ts"`.
 - Keep the stored setting keys and the `data-cumulative-gain` marker attribute unchanged.
 
-## Temporary
-
-The `test` script passes `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON`; remove it once `"type": "module"` lands in package.json (Task 11).
-
 ## Tests
 
-Test each module through its exported interface, in `test/` mirroring `src/` (`src/gain.ts` is tested by `test/gain.test.ts`). Build DOM fixtures with `createTestDocument` from `test/support/dom.ts`.
+Test each module through its exported interface, in `test/` mirroring `src/` (`src/units.ts` is tested by `test/units.test.ts`). Build DOM fixtures with `createTestDocument` from `test/support/dom.ts`.

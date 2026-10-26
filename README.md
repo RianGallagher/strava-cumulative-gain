@@ -22,8 +22,13 @@ Also:
 
 ## Install
 
-1. `chrome://extensions` → enable Developer mode
-2. **Load unpacked** → select this folder
+1. `npm install && npm run build` (writes `build/content.js`, the bundled
+   content script the manifest loads)
+2. `chrome://extensions` → enable Developer mode
+3. **Load unpacked** → select this folder
+
+After changing the sources, run `npm run build` again (or keep `npm run dev`
+running, which rebuilds on save) and reload the extension.
 
 ## How it works
 
@@ -49,17 +54,44 @@ Also:
   classes. "Gain" and "Loss" rows are cloned from the Elevation row, the rows
   below are shifted down and the box is grown to fit.
 
-- **Climb detection** (`src/climbs.js`) resamples to 10 m, smooths over 60 m,
+- **Climb detection** (`src/math/climbs.ts`) resamples to 10 m, smooths over 60 m,
   and grows a climb from a low point while dips stay under max(10 m, 10% of
   the rise so far). Flat run-ins/outs are trimmed, and an 800 m stretch that
   stays within 6 m splits a climb. Climbs need ≥ 30 m, ≥ 200 m long and ≥ 3%
   average. Gain is read off the gain curve, so it agrees with the tooltip.
 
+## Architecture
+
+Strict TypeScript in `src/`, bundled by esbuild into one content script,
+`build/content.js`, that runs in the page's main world (so it can read the
+props React passes to Strava's charts). No runtime dependencies.
+
+- `content-entry.ts` is the bundle's entry and the only file that reads the
+  browser's globals; it calls `start()` in `main.ts` with them.
+- `main.ts` wires everything: one MutationObserver schedules at most one pass
+  per animation frame; each pass decorates every elevation chart and fills
+  every profile tooltip. A client-side navigation gets a fresh page adapter.
+- `pages/` holds one adapter per Strava page (activity, route, route builder)
+  behind the `StravaPage` interface: where the profile comes from, where the
+  climbs UI goes, whether there is a splits table. A Strava redesign of one
+  page changes one file.
+- `strava/` reads Strava's data: chart props, the embedded route, activity
+  streams, the GPX export, and a load-once-with-retry loader.
+- `math/` is pure: distances, the cumulative gain curve with its pinning and
+  scaling, and climb detection. `elevation-model.ts` turns a profile into gain
+  and loss curves and numbered climbs, cached per profile.
+- `tooltip/` reads Strava's tooltip text, finds the crosshair, and adds the
+  rows while tracking Strava's own attribute values.
+- `ui/` draws the climb bands, the climbs panel and the splits toggle.
+- `settings.ts` holds the stored settings and the debug log; `units.ts` the
+  unit conversion and formatting.
+
+Coding standards (naming, units in names, globals) are in `CLAUDE.md`.
+
 ## Debug
 
 ```js
-localStorage.setItem("cumulative-gain:debug", "1") // then reload
-window.__cumulativeGain.fetched                    // activity / route fallback data
+localStorage.setItem("cumulative-gain:debug", "1") // then reload; errors are logged
 localStorage.removeItem("cumulative-gain:climbs")   // reset climbs to off
 localStorage.removeItem("cumulative-gain:splits")   // reset splits to net
 ```
@@ -67,13 +99,14 @@ localStorage.removeItem("cumulative-gain:splits")   // reset splits to net
 ## Test
 
 ```sh
-npm test
+npm run check   # type-check, lint, format check and tests
+npm test        # tests only
 ```
 
 ## Publishing
 
 ```sh
-npm run package   # runs the tests, then builds dist/cumulative-elevation-for-strava-<version>.zip
+npm run package   # runs the checks, builds, then zips dist/cumulative-elevation-for-strava-<version>.zip
 ```
 
 Upload that zip in the Chrome Web Store Developer Dashboard. Listing copy,

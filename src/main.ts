@@ -1,7 +1,7 @@
 // Wires the modules together: one observer on the page schedules at most one
 // pass per animation frame, and each pass decorates every elevation chart and
 // fills every profile tooltip from the current page's data.
-import { cachedElevationModel, type ElevationModel, type ProfileSource } from "./elevation-model.ts";
+import { cachedElevationModel, type ProfileSource } from "./elevation-model.ts";
 import { detectPage, type StravaPage } from "./pages/page.ts";
 import { createSettings, MARKER_ATTRIBUTE, type Settings } from "./settings.ts";
 import { crosshairDistance } from "./tooltip/crosshair.ts";
@@ -63,7 +63,7 @@ function decorateChart(pass: Pass, chart: SVGSVGElement): void {
   if (chart.closest(`[${MARKER_ATTRIBUTE}]`)) return;
   const source = page.profileSource(chart);
   if (!source) return;
-  const model: ElevationModel = cachedElevationModel(source);
+  const model = cachedElevationModel(source);
   const { chartStartMetres, chartEndMetres } = chartRange(source);
   const climbsEnabled = settings.climbsEnabled();
   if (climbsEnabled) drawClimbBands(chart, model.climbs, chartStartMetres, chartEndMetres);

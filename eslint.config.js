@@ -1,4 +1,3 @@
-// Temporary: this file is .mjs and the package.json "test" script passes a warning flag, both until Task 11 adds "type": "module".
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
@@ -9,7 +8,7 @@ const deniedAbbreviations =
 
 export default tseslint.config(
   {
-    ignores: ["src/*.js", "test/*.test.js", "build", "dist", "scripts/*.py", "node_modules"],
+    ignores: ["build", "dist", "scripts/*.py", "node_modules"],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,

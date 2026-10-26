@@ -7,16 +7,16 @@ Inputs: store/captures/*.png   Outputs: store/images/*.png
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 FONT = "/System/Library/Fonts/Avenir Next.ttc"
-DEMI, REGULAR = 2, 7  # face indexes in the .ttc
+DEMI_BOLD, REGULAR = 2, 7  # face indexes in the .ttc
 INK = (31, 42, 68)
 MUTED = (91, 101, 118)
 PAGE = (244, 245, 247)
 GREEN = (52, 211, 153)
-W, H = 1280, 800
+SLIDE_WIDTH_PIXELS, SLIDE_HEIGHT_PIXELS = 1280, 800
 
 
-def font(size, face=DEMI):
-    return ImageFont.truetype(FONT, size, index=face)
+def font(size_pixels, face=DEMI_BOLD):
+    return ImageFont.truetype(FONT, size_pixels, index=face)
 
 
 # Crop boxes (in capture pixels) that trim stray UI from the edges.
@@ -28,54 +28,78 @@ CROPS = {
 
 
 def capture(name):
-    img = Image.open(f"store/captures/{name}.png").convert("RGB")
-    return img.crop(CROPS[name]) if name in CROPS else img
+    image = Image.open(f"store/captures/{name}.png").convert("RGB")
+    return image.crop(CROPS[name]) if name in CROPS else image
 
 
-def fit(img, max_w, max_h):
-    k = min(max_w / img.width, max_h / img.height)
-    return img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)
+def fit(image, maximum_width_pixels, maximum_height_pixels):
+    scale = min(maximum_width_pixels / image.width, maximum_height_pixels / image.height)
+    return image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
 
 
-def card(canvas, img, x, y):
-    """Paste `img` on a white card with a soft shadow, top-left at (x, y)."""
-    pad = 16
+def card(canvas, image, left, top):
+    """Paste `image` on a white card with a soft shadow, top-left at (left, top)."""
+    padding_pixels = 16
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
-        (x - pad, y - pad + 6, x + img.width + pad, y + img.height + pad + 6), 14, fill=(20, 30, 50, 60)
+        (
+            left - padding_pixels,
+            top - padding_pixels + 6,
+            left + image.width + padding_pixels,
+            top + image.height + padding_pixels + 6,
+        ),
+        14,
+        fill=(20, 30, 50, 60),
     )
     canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(14)))
     ImageDraw.Draw(canvas).rounded_rectangle(
-        (x - pad, y - pad, x + img.width + pad, y + img.height + pad), 14, fill=(255, 255, 255, 255)
+        (
+            left - padding_pixels,
+            top - padding_pixels,
+            left + image.width + padding_pixels,
+            top + image.height + padding_pixels,
+        ),
+        14,
+        fill=(255, 255, 255, 255),
     )
-    canvas.paste(img, (x, y))
+    canvas.paste(image, (left, top))
 
 
 def slide(title, subtitle, place):
-    canvas = Image.new("RGBA", (W, H), PAGE + (255,))
-    d = ImageDraw.Draw(canvas)
-    d.rectangle((0, 0, W, 6), fill=GREEN)
-    d.text((64, 52), title, font=font(44), fill=INK)
-    d.text((64, 114), subtitle, font=font(22, REGULAR), fill=MUTED)
+    canvas = Image.new("RGBA", (SLIDE_WIDTH_PIXELS, SLIDE_HEIGHT_PIXELS), PAGE + (255,))
+    drawing = ImageDraw.Draw(canvas)
+    drawing.rectangle((0, 0, SLIDE_WIDTH_PIXELS, 6), fill=GREEN)
+    drawing.text((64, 52), title, font=font(44), fill=INK)
+    drawing.text((64, 114), subtitle, font=font(22, REGULAR), fill=MUTED)
     place(canvas, top=176)
     return canvas.convert("RGB")
 
 
-def centred(name, max_w=1120, max_h=560):
+def centred(name, maximum_width_pixels=1120, maximum_height_pixels=560):
     def place(canvas, top):
-        img = fit(capture(name), max_w, max_h)
-        card(canvas, img, (W - img.width) // 2, top + (H - top - 40 - img.height) // 2)
+        image = fit(capture(name), maximum_width_pixels, maximum_height_pixels)
+        card(
+            canvas,
+            image,
+            (SLIDE_WIDTH_PIXELS - image.width) // 2,
+            top + (SLIDE_HEIGHT_PIXELS - top - 40 - image.height) // 2,
+        )
 
     return place
 
 
 def splits_and_chart(canvas, top):
-    splits = fit(capture("activity-splits"), 330, H - top - 70)
+    splits = fit(capture("activity-splits"), 330, SLIDE_HEIGHT_PIXELS - top - 70)
     chart = fit(capture("activity-tooltip"), 720, 460)
-    gap = 60
-    x = (W - splits.width - gap - chart.width) // 2
-    card(canvas, splits, x, top + 8)
-    card(canvas, chart, x + splits.width + gap, top + 8 + (splits.height - chart.height) // 2)
+    gap_pixels = 60
+    left = (SLIDE_WIDTH_PIXELS - splits.width - gap_pixels - chart.width) // 2
+    card(canvas, splits, left, top + 8)
+    card(
+        canvas,
+        chart,
+        left + splits.width + gap_pixels,
+        top + 8 + (splits.height - chart.height) // 2,
+    )
 
 
 slides = [
@@ -94,12 +118,12 @@ for name, title, subtitle, place in slides:
 
 # Small promo tile, 440x280.
 tile = Image.new("RGBA", (440, 280), INK + (255,))
-d = ImageDraw.Draw(tile)
+drawing = ImageDraw.Draw(tile)
 icon = Image.open("icons/icon128.png").convert("RGBA")
 tile.alpha_composite(icon, (24, 76))
-d.text((156, 92), "Cumulative", font=font(30), fill=(255, 255, 255))
-d.text((156, 128), "Elevation", font=font(30), fill=(255, 255, 255))
-d.text((156, 168), "for Strava", font=font(20, REGULAR), fill=GREEN)
-d.rectangle((0, 274, 440, 280), fill=GREEN)
+drawing.text((156, 92), "Cumulative", font=font(30), fill=(255, 255, 255))
+drawing.text((156, 128), "Elevation", font=font(30), fill=(255, 255, 255))
+drawing.text((156, 168), "for Strava", font=font(20, REGULAR), fill=GREEN)
+drawing.rectangle((0, 274, 440, 280), fill=GREEN)
 tile.convert("RGB").save("store/images/promo-small.png")
 print("store/images/promo-small.png")
