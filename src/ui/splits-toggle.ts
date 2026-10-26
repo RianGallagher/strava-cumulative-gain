@@ -93,12 +93,17 @@ export function renderSplitsToggle(
     let html = netHtml;
     if (options.view === "gain-loss") {
       const inFeet = /feet|\bft\b/.test(netHtml);
-      const display = (metres: number): number => Math.round(inFeet ? metres / METRES_PER_UNIT.ft : metres);
+      const roundToDisplayUnit = (metres: number): number =>
+        Math.round(inFeet ? metres / METRES_PER_UNIT.ft : metres);
       const startMetres = splitIndex * splitMetres;
       const endMetres = Math.min((splitIndex + 1) * splitMetres, chartEndMetres);
-      const gain = display(model.gain.valueAt(endMetres) - model.gain.valueAt(startMetres));
-      const loss = display(model.loss.valueAt(endMetres) - model.loss.valueAt(startMetres));
-      html = `+${String(gain)}/−${String(loss)}`;
+      const gainInDisplayUnits = roundToDisplayUnit(
+        model.gain.valueAt(endMetres) - model.gain.valueAt(startMetres),
+      );
+      const lossInDisplayUnits = roundToDisplayUnit(
+        model.loss.valueAt(endMetres) - model.loss.valueAt(startMetres),
+      );
+      html = `+${String(gainInDisplayUnits)}/−${String(lossInDisplayUnits)}`;
     }
     if (cell.getAttribute(SHOWN_HTML_ATTRIBUTE) !== html) {
       cell.innerHTML = html;

@@ -29,7 +29,7 @@ function createChart() {
   const plot = requireElement(document, "#plot");
   const area = requireElement(document, "#area");
   stubBoundingBox(area, { x: 10, y: 5, width: 200, height: 80 });
-  stubScreenMatrix(plot, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
+  stubScreenMatrix(plot, { a: 1, b: 0, c: 0, d: 1, e: 45, f: 10 });
   stubScreenMatrix(area, { a: 2, b: 0, c: 0, d: 3, e: 4, f: 6 });
   return { chart, plot };
 }
@@ -48,7 +48,7 @@ describe("drawClimbBands", () => {
     const { chart } = createChart();
     drawClimbBands(chart, [climb(1, 250, 500)], 0, 1000);
     const group = requireElement(chart, BANDS_SELECTOR);
-    assert.equal(group.getAttribute("transform"), "matrix(2,0,0,3,4,6)");
+    assert.equal(group.getAttribute("transform"), "matrix(2,0,0,3,-41,-4)");
     const band = requireElement(group, "rect");
     assert.equal(band.getAttribute("x"), String(10 + 50));
     assert.equal(band.getAttribute("width"), "50");

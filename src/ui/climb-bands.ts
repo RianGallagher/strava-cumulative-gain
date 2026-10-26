@@ -92,13 +92,13 @@ export function drawClimbBands(
   }
   group.replaceChildren();
 
-  const xOf = (distanceMetres: number): number =>
+  const xPixelsForDistance = (distanceMetres: number): number =>
     box.x + ((distanceMetres - chartStartMetres) / spanMetres) * box.width;
   const topPixels = Math.min(0, box.y);
   const bottomPixels = box.y + box.height;
   for (const climb of climbs) {
-    const leftPixels = xOf(climb.startMetres);
-    const rightPixels = xOf(climb.endMetres);
+    const leftPixels = xPixelsForDistance(climb.startMetres);
+    const rightPixels = xPixelsForDistance(climb.endMetres);
     const band = document.createElementNS(SVG_NAMESPACE, "rect");
     band.setAttribute("data-climb", String(climb.number));
     band.setAttribute("x", String(leftPixels));
