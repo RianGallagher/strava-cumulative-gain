@@ -1,7 +1,7 @@
 import type { ProfileSource } from "../elevation-model.ts";
-import { cumulativeDistances, type LatLon } from "../math/distance.ts";
+import { cumulativeDistances, type Coordinates } from "../math/distance.ts";
 
-interface ElevationPoint extends LatLon {
+interface ElevationPoint extends Coordinates {
   elevationMetres: number;
 }
 
@@ -31,7 +31,7 @@ export async function fetchRouteGpx(
     .filter((point): point is ElevationPoint => point !== null);
   if (points.length < 2) return null;
   return {
-    distances: cumulativeDistances(points),
-    elevations: points.map((point) => point.elevationMetres),
+    distancesMetres: cumulativeDistances(points),
+    elevationsMetres: points.map((point) => point.elevationMetres),
   };
 }

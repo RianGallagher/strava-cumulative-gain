@@ -8,13 +8,16 @@ Run `npm run check` (typecheck, lint, format check, tests). Commit only when it 
 
 ## Naming
 
-Every identifier is a full word, at least 3 characters, in src, tests and scripts. ESLint enforces the length and a denylist of abbreviations (`el`, `rect`, `elem`, `btn`, `idx`, `val`, `err`, `dist`, `elev`, `pts`, ...). Write `element`, `index`, `error`, `distanceMetres`.
+Every identifier is a full word, at least 3 characters, in src, tests and scripts (type parameters too: `ElementType`, not `T`). Write `element`, `index`, `error`, `properties`, `maximumGrade`, `requestOptions`. ESLint enforces this:
 
-A number carries its unit in the name: `distanceMetres`, `durationSeconds`, `gainFeet`.
+- `id-length` (minimum 3) and `id-denylist` reject whole names such as `el`, `rect`, `elem`, `btn`, `idx`, `val`, `err`, `dist`, `elev`, `pts`.
+- `@typescript-eslint/naming-convention` rejects abbreviations inside longer names: a `Ms`/`_MS` suffix, `max`/`Max`/`MAX` or `props`/`Props` as a word part, `init`, and type parameters shorter than 3 characters. Property names that mirror React or Next.js data (`memoizedProps`, `props`, `pageProps`) are allowed as properties only.
+
+A number carries its unit in the name: `distanceMetres`, `durationSeconds`, `delayMilliseconds`, `gainFeet`; so do arrays of them (`distancesMetres`). Strava's own data keys (`distance`, `altitude`, `elevation`, `legs`, `length`, `elevationGain`) are read as they are.
 
 ## Globals
 
-Only `src/content-entry.ts` touches `document`, `window`, `location`, `localStorage` or `fetch`. Every other module receives them as parameters and creates nodes with `element.ownerDocument`.
+Only `src/content-entry.ts` touches `document`, `window`, `location`, `localStorage`, `fetch`, timers, `requestAnimationFrame` or `navigator` (ESLint `no-restricted-globals` enforces it for the rest of `src/`). Every other module receives them as parameters and creates nodes with `element.ownerDocument`.
 
 ## Modules
 

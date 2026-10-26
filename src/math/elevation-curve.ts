@@ -50,14 +50,14 @@ export function interpolateAt(
  */
 export function cumulativeClimb(elevations: readonly number[], thresholdMetres: number): number[] {
   const climbs: number[] = [];
-  let total = 0;
+  let totalMetres = 0;
   let isClimbing = false;
   let referenceMetres = elevations[0] ?? 0; // lowest point, or highest while climbing
   elevations.forEach((elevationMetres, index) => {
     if (index > 0) {
       if (isClimbing) {
         if (elevationMetres > referenceMetres) {
-          total += elevationMetres - referenceMetres;
+          totalMetres += elevationMetres - referenceMetres;
           referenceMetres = elevationMetres;
         } else if (referenceMetres - elevationMetres >= thresholdMetres) {
           isClimbing = false;
@@ -66,12 +66,12 @@ export function cumulativeClimb(elevations: readonly number[], thresholdMetres: 
       } else if (elevationMetres < referenceMetres) {
         referenceMetres = elevationMetres;
       } else if (elevationMetres > referenceMetres && elevationMetres - referenceMetres >= thresholdMetres) {
-        total += elevationMetres - referenceMetres;
+        totalMetres += elevationMetres - referenceMetres;
         referenceMetres = elevationMetres;
         isClimbing = true;
       }
     }
-    climbs.push(total);
+    climbs.push(totalMetres);
   });
   return climbs;
 }
@@ -139,9 +139,9 @@ export function legCheckpoints(
   for (const leg of legs) {
     for (const path of leg.paths) {
       distanceMetres += path.length || 0;
-      const amount = path[field];
-      if (typeof amount === "number") {
-        cumulativeMetres += amount;
+      const amountMetres = path[field];
+      if (typeof amountMetres === "number") {
+        cumulativeMetres += amountMetres;
         hasField = true;
       }
     }

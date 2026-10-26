@@ -21,8 +21,8 @@ export async function fetchActivityStreams(
     if (!isProfileArray(distance) || !isProfileArray(altitude) || distance.length !== altitude.length) {
       return null;
     }
-    const times = isProfileArray(time) && time.length === distance.length ? time : null;
-    return { distances: distance, elevations: altitude, times };
+    const timesSeconds = isProfileArray(time) && time.length === distance.length ? time : null;
+    return { distancesMetres: distance, elevationsMetres: altitude, timesSeconds };
   } catch {
     return null;
   }

@@ -70,15 +70,15 @@ function resample(
   );
   const halfWindowSamples = Math.max(0, Math.round(smoothingMetres / spacingMetres / 2));
   const sampledElevations = Array.from(rawElevations.keys(), (centreIndex) => {
-    let total = 0;
+    let elevationSumMetres = 0;
     let count = 0;
     const firstIndex = Math.max(0, centreIndex - halfWindowSamples);
     const lastIndex = Math.min(sampleCount - 1, centreIndex + halfWindowSamples);
     for (let windowIndex = firstIndex; windowIndex <= lastIndex; windowIndex++) {
-      total += rawElevations[windowIndex] ?? 0;
+      elevationSumMetres += rawElevations[windowIndex] ?? 0;
       count++;
     }
-    return total / count;
+    return elevationSumMetres / count;
   });
   return { distances: sampledDistances, elevations: sampledElevations };
 }

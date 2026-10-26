@@ -22,8 +22,8 @@ test("reads distances, elevations, legs and the headline gain", () => {
     elevationGain: 5,
   };
   assert.deepEqual(readEmbeddedRoute(documentWithRoute(route), "123"), {
-    distances: [0, 100, 200],
-    elevations: [10, 15, 13],
+    distancesMetres: [0, 100, 200],
+    elevationsMetres: [10, 15, 13],
     legs,
     headlineGainMetres: 5,
   });

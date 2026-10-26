@@ -22,16 +22,16 @@ export function readEmbeddedRoute(document: Document, routeId: string): ProfileS
   if (route === null) return null;
   const { id, elevation, legs, elevationGain } = route;
   if (String(id) !== routeId || !Array.isArray(elevation) || elevation.length < 2) return null;
-  const distances: number[] = [];
-  const elevations: number[] = [];
+  const distancesMetres: number[] = [];
+  const elevationsMetres: number[] = [];
   for (const point of elevation) {
     if (!isNumberArray(point) || point.length < 2) return null;
-    distances.push(point[0] ?? Number.NaN);
-    elevations.push(point[1] ?? Number.NaN);
+    distancesMetres.push(point[0] ?? Number.NaN);
+    elevationsMetres.push(point[1] ?? Number.NaN);
   }
   return {
-    distances,
-    elevations,
+    distancesMetres,
+    elevationsMetres,
     legs: isLegArray(legs) ? legs : null,
     ...(typeof elevationGain === "number" ? { headlineGainMetres: elevationGain } : {}),
   };

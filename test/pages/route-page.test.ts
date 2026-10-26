@@ -33,7 +33,7 @@ function routePage(fixture: PageFixture): StravaPage {
   return page;
 }
 
-test("chart props are merged with the embedded legs and headline", () => {
+test("chart properties are merged with the embedded legs and headline", () => {
   const fixture = pageFixture(chartHtml + nextDataScript(embeddedRoute), { [GPX_URL]: gpx });
   const chart = svgById(fixture.document, "chart");
   const distances = [0, 50, 100];
@@ -43,31 +43,31 @@ test("chart props are merged with the embedded legs and headline", () => {
   page.prepare(() => undefined);
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.equal(source.distances, distances);
-  assert.equal(source.elevations, elevations);
+  assert.equal(source.distancesMetres, distances);
+  assert.equal(source.elevationsMetres, elevations);
   assert.deepEqual(source.legs, legs);
   assert.equal(source.headlineGainMetres, 6);
   assert.deepEqual(fixture.requestedUrls, []);
 });
 
-test("legs from the chart props are kept", () => {
+test("legs from the chart properties are kept", () => {
   const fixture = pageFixture(chartHtml + nextDataScript({ ...embeddedRoute, legs: undefined }));
   const chart = svgById(fixture.document, "chart");
   attachChartProperties(chart, { distance: [0, 100], elevation: [1, 2], legs });
   assert.equal(routePage(fixture).profileSource(chart)?.legs, legs);
 });
 
-test("without chart props the embedded route is used, the same arrays every time", () => {
+test("without chart properties the embedded route is used, the same arrays every time", () => {
   const fixture = pageFixture(chartHtml + nextDataScript(embeddedRoute), { [GPX_URL]: gpx });
   const chart = svgById(fixture.document, "chart");
   const page = routePage(fixture);
   page.prepare(() => undefined);
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.deepEqual(source.distances, [0, 100, 200]);
-  assert.deepEqual(source.elevations, [10, 15, 13]);
+  assert.deepEqual(source.distancesMetres, [0, 100, 200]);
+  assert.deepEqual(source.elevationsMetres, [10, 15, 13]);
   assert.equal(source.headlineGainMetres, 6);
-  assert.equal(page.profileSource(chart)?.elevations, source.elevations);
+  assert.equal(page.profileSource(chart)?.elevationsMetres, source.elevationsMetres);
   assert.deepEqual(fixture.requestedUrls, []);
 });
 
@@ -88,10 +88,10 @@ async function gpxFallback(html: string): Promise<void> {
   await ready;
   assert.equal(readyCount, 1);
   assert.deepEqual(fixture.requestedUrls, [GPX_URL]);
-  assert.deepEqual(page.profileSource(chart)?.elevations, [30, 40]);
+  assert.deepEqual(page.profileSource(chart)?.elevationsMetres, [30, 40]);
 }
 
-test("without chart props or embedded data the GPX export is loaded once", async () => {
+test("without chart properties or embedded data the GPX export is loaded once", async () => {
   await gpxFallback("");
 });
 

@@ -46,7 +46,7 @@ export function svgById(document: Document, id: string): SVGSVGElement {
   return svg;
 }
 
-// Gives the chart a fake React fiber whose own props are `properties`.
+// Gives the chart a fake React fiber whose own properties are `properties`.
 export function attachChartProperties(chart: Element, properties: Record<string, unknown>): void {
   Object.defineProperty(chart, "__reactFiber$test", {
     value: { memoizedProps: properties, return: null },

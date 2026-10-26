@@ -107,11 +107,14 @@ export async function flushFrames(window: DOMWindow): Promise<void> {
   }
 }
 
-// The type parameter only narrows the result, exactly like Element.querySelector<T>.
+// The type parameter only narrows the result, exactly like Element.querySelector<ElementType>.
 /** The first match for a selector; fails the test (by throwing) when there is none. */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-export function requireElement<T extends Element = Element>(root: ParentNode, selector: string): T {
-  const found = root.querySelector<T>(selector);
+export function requireElement<ElementType extends Element = Element>(
+  root: ParentNode,
+  selector: string,
+): ElementType {
+  const found = root.querySelector<ElementType>(selector);
   if (!found) throw new Error(`No element matches ${selector}`);
   return found;
 }

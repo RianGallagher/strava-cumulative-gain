@@ -6,6 +6,37 @@ const deniedAbbreviations =
     " ",
   );
 
+// Abbreviations inside longer names, which id-denylist (whole names only) misses:
+// a "Ms"/"_MS" unit suffix, "max"/"Max"/"MAX" or "prop(s)"/"Prop(s)"/"PROP(S)"
+// as a word part, and `init`.
+const deniedWordParts = [
+  "Ms$",
+  "(^|_)MS$",
+  "^max([A-Z_]|$)",
+  "Max([A-Z]|$)",
+  "(^|_)MAX(_|$)",
+  "^props?([A-Z]|$)",
+  "Props?([A-Z]|$)",
+  "(^|_)PROPS?(_|$)",
+  "^init$",
+].join("|");
+
+// Names React and Next.js (Strava's page data) choose; our fixtures mirror them.
+const externalNames = "^(memoizedProps|props|pageProps)$";
+
+// Only the bundle's entry point may read the browser's globals.
+const browserGlobals = [
+  "document",
+  "window",
+  "location",
+  "localStorage",
+  "fetch",
+  "setTimeout",
+  "clearTimeout",
+  "requestAnimationFrame",
+  "navigator",
+];
+
 export default tseslint.config(
   {
     ignores: ["build", "dist", "scripts/*.py", "node_modules"],
@@ -22,6 +53,39 @@ export default tseslint.config(
     rules: {
       "id-length": ["error", { min: 3, exceptions: ["id"], properties: "never" }],
       "id-denylist": ["error", ...deniedAbbreviations],
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          selector: "default",
+          format: null,
+          custom: { regex: deniedWordParts, match: false },
+        },
+        {
+          // External keys are allowed as properties only, never as our own variables.
+          selector: ["objectLiteralProperty", "typeProperty"],
+          format: null,
+          filter: { regex: externalNames, match: true },
+        },
+        {
+          // id-length doesn't check type parameters, so `T` is caught here.
+          selector: "typeParameter",
+          format: null,
+          custom: { regex: `^.{1,2}$|${deniedWordParts}`, match: false },
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/**/*.ts"],
+    ignores: ["src/content-entry.ts"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        ...browserGlobals.map((name) => ({
+          name,
+          message: "Only src/content-entry.ts reads browser globals; take it as a parameter.",
+        })),
+      ],
     },
   },
   {

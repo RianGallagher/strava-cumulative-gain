@@ -27,10 +27,7 @@ function readHeadlineGainMetres(document: Document): number | undefined {
 
 export function createActivityPage(activityId: string, dependencies: PageDependencies): StravaPage {
   const { document, fetch: fetchFunction, schedule } = dependencies;
-  const streamsLoader = createLoader(
-    () => fetchActivityStreams(activityId, fetchFunction),
-    schedule ? { schedule } : {},
-  );
+  const streamsLoader = createLoader(() => fetchActivityStreams(activityId, fetchFunction), { schedule });
 
   return {
     kind: "activity",

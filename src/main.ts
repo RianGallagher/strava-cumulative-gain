@@ -22,7 +22,7 @@ export interface EnvironmentWindow {
   MutationObserver: typeof MutationObserver;
   requestAnimationFrame(callback: () => void): number;
   cancelAnimationFrame(handle: number): void;
-  setTimeout(callback: () => void, delayMs: number): number;
+  setTimeout(callback: () => void, delayMilliseconds: number): number;
   clearTimeout(handle: number): void;
   console: Pick<Console, "log">;
 }
@@ -53,7 +53,10 @@ interface Pass {
 }
 
 function chartRange(source: ProfileSource): { chartStartMetres: number; chartEndMetres: number } {
-  return { chartStartMetres: source.distances[0] ?? 0, chartEndMetres: source.distances.at(-1) ?? 0 };
+  return {
+    chartStartMetres: source.distancesMetres[0] ?? 0,
+    chartEndMetres: source.distancesMetres.at(-1) ?? 0,
+  };
 }
 
 // Bands, the climbs panel and (on an activity) the splits toggle for one chart.
@@ -119,8 +122,8 @@ function fillTooltip(pass: Pass, tooltip: Element): void {
       ({ startMetres, endMetres }) => distanceMetres >= startMetres && distanceMetres <= endMetres,
     );
     if (climb) {
-      const length = formatDistance(climb.lengthMetres, shown.unit === "mi" ? "mi" : "km", 1);
-      const value = `${length} · ${formatGrade(climb.averageGrade)}`;
+      const lengthText = formatDistance(climb.lengthMetres, shown.unit === "mi" ? "mi" : "km", 1);
+      const value = `${lengthText} · ${formatGrade(climb.averageGrade)}`;
       rows.push({ key: "climb", label: `Climb ${String(climb.number)}`, value });
     }
     highlightClimbBand(chart, climb?.number ?? null);
@@ -144,11 +147,11 @@ export function start(environment: Environment): Running {
 
   const tooltipRows = createTooltipRows(schedule);
 
-  function scheduleRetry(callback: () => void, delayMs: number): void {
+  function scheduleRetry(callback: () => void, delayMilliseconds: number): void {
     const handle = window.setTimeout(() => {
       pendingRetries.delete(handle);
       callback();
-    }, delayMs);
+    }, delayMilliseconds);
     pendingRetries.add(handle);
   }
 

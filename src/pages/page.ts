@@ -28,7 +28,7 @@ export interface StravaPage {
 export interface PageDependencies {
   document: Document;
   fetch: typeof fetch;
-  schedule?: (callback: () => void, delayMs: number) => void;
+  schedule: (callback: () => void, delayMilliseconds: number) => void;
 }
 
 const ACTIVITY_PATH = /^\/activities\/(\d+)/;

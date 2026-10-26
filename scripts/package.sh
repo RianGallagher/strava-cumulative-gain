@@ -11,7 +11,7 @@ rm -rf build
 npm run build
 
 version=$(node -p 'require("./manifest.json").version')
-out="dist/cumulative-elevation-for-strava-$version.zip"
+zip_path="dist/cumulative-elevation-for-strava-$version.zip"
 
 # Every file the manifest references must exist, or the store rejects it.
 node -e '
@@ -23,7 +23,7 @@ if (missing.length) { console.error("missing:", missing.join(", ")); process.exi
 '
 
 mkdir -p dist
-rm -f "$out"
-zip -q -r -D -X "$out" manifest.json build icons -x '*.DS_Store'
-echo "$out"
-unzip -l "$out" | tail -n +4 | sed '$d' | sed '$d'
+rm -f "$zip_path"
+zip -q -r -D -X "$zip_path" manifest.json build icons -x '*.DS_Store'
+echo "$zip_path"
+unzip -l "$zip_path" | tail -n +4 | sed '$d' | sed '$d'

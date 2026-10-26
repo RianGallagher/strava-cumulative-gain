@@ -4,23 +4,20 @@ export interface Loader<Result> {
 }
 
 export interface LoaderOptions {
-  retryDelaysMs?: readonly number[];
-  schedule?: (callback: () => void, delayMs: number) => void;
+  retryDelaysMilliseconds?: readonly number[];
+  /** Runs `callback` later; the caller owns the timer (main.ts clears it on stop). */
+  schedule: (callback: () => void, delayMilliseconds: number) => void;
 }
 
-const DEFAULT_RETRY_DELAYS_MS = [2000, 5000, 15000];
-
-function scheduleWithTimeout(callback: () => void, delayMs: number): void {
-  setTimeout(callback, delayMs);
-}
+const DEFAULT_RETRY_DELAYS_MILLISECONDS = [2000, 5000, 15000];
 
 // Loads once per `start`; a null result or a throw is retried after each
 // delay in turn, then given up on. On success `onReady` fires exactly once.
 export function createLoader<Result>(
   load: () => Promise<Result | null>,
-  options: LoaderOptions = {},
+  options: LoaderOptions,
 ): Loader<Result> {
-  const { retryDelaysMs = DEFAULT_RETRY_DELAYS_MS, schedule = scheduleWithTimeout } = options;
+  const { retryDelaysMilliseconds = DEFAULT_RETRY_DELAYS_MILLISECONDS, schedule } = options;
   let started = false;
   let loaded: Result | null = null;
 
@@ -39,10 +36,10 @@ export function createLoader<Result>(
       onReady();
       return;
     }
-    if (retryIndex >= retryDelaysMs.length) return;
+    if (retryIndex >= retryDelaysMilliseconds.length) return;
     schedule(() => {
       void attempt(onReady, retryIndex + 1);
-    }, retryDelaysMs[retryIndex]);
+    }, retryDelaysMilliseconds[retryIndex]);
   }
 
   return {

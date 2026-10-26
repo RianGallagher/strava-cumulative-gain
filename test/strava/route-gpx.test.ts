@@ -19,14 +19,14 @@ test("builds haversine distances and elevations from track points", async () => 
   const { window } = createTestDocument("<p></p>");
   const source = await fetchRouteGpx("7", fetchReturning(gpx), new window.DOMParser());
   assert.ok(source);
-  assert.deepEqual(source.elevations, [10, 20, 15]);
+  assert.deepEqual(source.elevationsMetres, [10, 20, 15]);
   const firstLegMetres = haversineMetres(
     { latitude: 53, longitude: -6 },
     { latitude: 53.001, longitude: -6 },
   );
-  assert.equal(source.distances.length, 3);
-  assert.equal(source.distances[0], 0);
-  assert.ok(Math.abs((source.distances[1] ?? Number.NaN) - firstLegMetres) < 1e-6);
+  assert.equal(source.distancesMetres.length, 3);
+  assert.equal(source.distancesMetres[0], 0);
+  assert.ok(Math.abs((source.distancesMetres[1] ?? Number.NaN) - firstLegMetres) < 1e-6);
 });
 
 test("skips points without a finite elevation and requests with credentials", async () => {
@@ -39,13 +39,13 @@ test("skips points without a finite elevation and requests with credentials", as
   const { window } = createTestDocument("<p></p>");
   let requestedUrl = "";
   let credentials: RequestCredentials | undefined;
-  const fetchFunction: typeof fetch = (input, init) => {
+  const fetchFunction: typeof fetch = (input, requestOptions) => {
     requestedUrl = typeof input === "string" ? input : "unexpected";
-    credentials = init?.credentials;
+    credentials = requestOptions?.credentials;
     return Promise.resolve(new Response(body));
   };
   const source = await fetchRouteGpx("7", fetchFunction, new window.DOMParser());
-  assert.deepEqual(source?.elevations, [5, 8]);
+  assert.deepEqual(source?.elevationsMetres, [5, 8]);
   assert.equal(requestedUrl, "/routes/7/export_gpx");
   assert.equal(credentials, "include");
 });

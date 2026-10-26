@@ -1,5 +1,5 @@
 import type { ProfileSource } from "../elevation-model.ts";
-import { readChartProps } from "../strava/chart-props.ts";
+import { readChartProperties } from "../strava/chart-properties.ts";
 import { readEmbeddedRoute } from "../strava/embedded-route.ts";
 import { createLoader } from "../strava/loader.ts";
 import { fetchRouteGpx } from "../strava/route-gpx.ts";
@@ -8,12 +8,12 @@ import type { ClimbsPlacement, PageDependencies, StravaPage } from "./page.ts";
 // Parsing the embedded JSON is costly and a fresh parse means fresh arrays
 // (so a fresh elevation model), so it is re-read only when the script changes.
 function createEmbeddedRouteReader(document: Document, routeId: string): () => ProfileSource | null {
-  let readText: string | null | undefined;
+  let lastReadText: string | null | undefined;
   let embeddedRoute: ProfileSource | null = null;
   return () => {
     const text = document.getElementById("__NEXT_DATA__")?.textContent ?? null;
-    if (text !== readText) {
-      readText = text;
+    if (text !== lastReadText) {
+      lastReadText = text;
       embeddedRoute = readEmbeddedRoute(document, routeId);
     }
     return embeddedRoute;
@@ -44,7 +44,7 @@ export function createRoutePage(routeId: string, dependencies: PageDependencies)
       const view = document.defaultView;
       return view ? fetchRouteGpx(routeId, fetchFunction, new view.DOMParser()) : Promise.resolve(null);
     },
-    schedule ? { schedule } : {},
+    { schedule },
   );
   let notifyReady: (() => void) | null = null;
 
@@ -55,20 +55,20 @@ export function createRoutePage(routeId: string, dependencies: PageDependencies)
     prepare(onReady) {
       notifyReady ??= onReady;
     },
-    // The chart's own props, else (for the elevation chart only) the embedded
+    // The chart's own properties, else (for the elevation chart only) the embedded
     // page data, else the GPX export.
     // The chart's ancestors don't hold the legs; the embedded data does, along
     // with Strava's headline total.
     profileSource(chart) {
       const embedded = readEmbedded();
-      const properties = readChartProps(chart);
+      const properties = readChartProperties(chart);
       if (properties !== null) {
-        const { distances, elevations } = properties;
+        const { distancesMetres, elevationsMetres } = properties;
         const legs = properties.legs ?? embedded?.legs ?? null;
         const headlineGainMetres = embedded?.headlineGainMetres;
         return {
-          distances,
-          elevations,
+          distancesMetres,
+          elevationsMetres,
           legs,
           ...(headlineGainMetres === undefined ? {} : { headlineGainMetres }),
         };

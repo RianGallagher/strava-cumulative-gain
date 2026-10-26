@@ -7,8 +7,8 @@ import { createTestDocument, requireElement } from "../support/dom.ts";
 
 // Climbs 10 m, then 20 m, then falls 5 m over the last half kilometre.
 const model = buildElevationModel({
-  distances: [0, 1000, 2000, 2500],
-  elevations: [0, 10, 30, 25],
+  distancesMetres: [0, 1000, 2000, 2500],
+  elevationsMetres: [0, 10, 30, 25],
 });
 
 const NET_HTML = ["<span>10 m</span>", "<span>20 m</span>", "<b>-5</b> m"];
@@ -87,7 +87,10 @@ describe("renderSplitsToggle", () => {
 
   it("uses 1609.344 m splits and feet for an MI table with feet cells", () => {
     const { table } = createTable("mi", ["10 ft", "20 ft"]);
-    const longModel = buildElevationModel({ distances: [0, 1609.344, 3218.688], elevations: [0, 30, 30] });
+    const longModel = buildElevationModel({
+      distancesMetres: [0, 1609.344, 3218.688],
+      elevationsMetres: [0, 30, 30],
+    });
     renderSplitsToggle(table, longModel, 3218.688, { view: "gain-loss", onToggle: noop });
     assert.deepEqual(cellTexts(table), ["+98/−0", "+0/−0"]);
   });

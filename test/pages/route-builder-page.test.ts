@@ -12,7 +12,7 @@ function builderPage(fixture: PageFixture): StravaPage {
   return page;
 }
 
-test("the profile is the chart props with their legs", () => {
+test("the profile is the chart properties with their legs", () => {
   const fixture = pageFixture("<svg id='chart'></svg>");
   const chart = svgById(fixture.document, "chart");
   const distances = [0, 100];
@@ -22,14 +22,14 @@ test("the profile is the chart props with their legs", () => {
   page.prepare(() => undefined);
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.equal(source.distances, distances);
-  assert.equal(source.elevations, elevations);
+  assert.equal(source.distancesMetres, distances);
+  assert.equal(source.elevationsMetres, elevations);
   assert.equal(source.legs, legs);
   assert.equal(source.headlineGainMetres, undefined);
   assert.deepEqual(fixture.requestedUrls, []);
 });
 
-test("without chart props there is no profile", () => {
+test("without chart properties there is no profile", () => {
   const fixture = pageFixture("<svg id='chart'></svg>");
   assert.equal(builderPage(fixture).profileSource(svgById(fixture.document, "chart")), null);
 });

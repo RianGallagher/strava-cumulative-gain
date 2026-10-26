@@ -35,18 +35,20 @@ def draw(size_pixels):
     drawing.rounded_rectangle(box, radius=round(box_width_pixels * 0.22), fill=BACKGROUND)
 
     inset_pixels = round(box_width_pixels * 0.14)
-    left = box[0] + inset_pixels
-    top = box[1] + inset_pixels
-    right = box[2] - inset_pixels
-    bottom = box[3] - inset_pixels
+    left_pixels = box[0] + inset_pixels
+    top_pixels = box[1] + inset_pixels
+    right_pixels = box[2] - inset_pixels
+    bottom_pixels = box[3] - inset_pixels
     hill_outline = [
         (
-            left + (right - left) * step / PROFILE_STEPS,
-            bottom - (bottom - top) * 0.8 * profile(step / PROFILE_STEPS),
+            left_pixels + (right_pixels - left_pixels) * step / PROFILE_STEPS,
+            bottom_pixels - (bottom_pixels - top_pixels) * 0.8 * profile(step / PROFILE_STEPS),
         )
         for step in range(PROFILE_STEPS + 1)
     ]
-    drawing.polygon([(left, bottom)] + hill_outline + [(right, bottom)], fill=HILL)
+    drawing.polygon(
+        [(left_pixels, bottom_pixels)] + hill_outline + [(right_pixels, bottom_pixels)], fill=HILL
+    )
 
     # Cumulative gain: only ever rises; steep where the profile climbs.
     gain = [0.0]
@@ -56,8 +58,8 @@ def draw(size_pixels):
     total_gain = gain[-1]
     gain_line = [
         (
-            left + (right - left) * step / PROFILE_STEPS,
-            bottom - (bottom - top) * (0.06 + 0.9 * gain_so_far / total_gain),
+            left_pixels + (right_pixels - left_pixels) * step / PROFILE_STEPS,
+            bottom_pixels - (bottom_pixels - top_pixels) * (0.06 + 0.9 * gain_so_far / total_gain),
         )
         for step, gain_so_far in enumerate(gain)
     ]
@@ -66,13 +68,13 @@ def draw(size_pixels):
     )
     drawing.line(gain_line, fill=LINE, width=line_width_pixels, joint="curve")
     dot_radius_pixels = line_width_pixels * 0.9
-    end_x, end_y = gain_line[-1]
+    end_x_pixels, end_y_pixels = gain_line[-1]
     drawing.ellipse(
         (
-            end_x - dot_radius_pixels,
-            end_y - dot_radius_pixels,
-            end_x + dot_radius_pixels,
-            end_y + dot_radius_pixels,
+            end_x_pixels - dot_radius_pixels,
+            end_y_pixels - dot_radius_pixels,
+            end_x_pixels + dot_radius_pixels,
+            end_y_pixels + dot_radius_pixels,
         ),
         fill=LINE,
     )

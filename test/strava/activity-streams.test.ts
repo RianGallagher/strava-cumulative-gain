@@ -4,7 +4,7 @@ import { fetchActivityStreams } from "../../src/strava/activity-streams.ts";
 
 interface Recorded {
   fetchFunction: typeof fetch;
-  requests: { url: string; init: RequestInit | undefined }[];
+  requests: { url: string; requestOptions: RequestInit | undefined }[];
 }
 
 function urlOf(input: Parameters<typeof fetch>[0]): string {
@@ -14,8 +14,8 @@ function urlOf(input: Parameters<typeof fetch>[0]): string {
 
 function respondWith(body: unknown, status = 200): Recorded {
   const requests: Recorded["requests"] = [];
-  const fetchFunction: typeof fetch = (input, init) => {
-    requests.push({ url: urlOf(input), init });
+  const fetchFunction: typeof fetch = (input, requestOptions) => {
+    requests.push({ url: urlOf(input), requestOptions });
     const text = typeof body === "string" ? body : JSON.stringify(body);
     return Promise.resolve(new Response(text, { status }));
   };
@@ -29,12 +29,16 @@ test("requests the three streams with credentials and returns them", async () =>
     time: [0, 5, 10],
   });
   const source = await fetchActivityStreams("42", fetchFunction);
-  assert.deepEqual(source, { distances: [0, 10, 20], elevations: [1, 2, 3], times: [0, 5, 10] });
+  assert.deepEqual(source, {
+    distancesMetres: [0, 10, 20],
+    elevationsMetres: [1, 2, 3],
+    timesSeconds: [0, 5, 10],
+  });
   assert.equal(
     requests[0]?.url,
     "/activities/42/streams?stream_types[]=distance&stream_types[]=altitude&stream_types[]=time",
   );
-  assert.equal(requests[0]?.init?.credentials, "include");
+  assert.equal(requests[0]?.requestOptions?.credentials, "include");
 });
 
 test("a missing or mismatched time stream gives times null", async () => {
@@ -42,12 +46,12 @@ test("a missing or mismatched time stream gives times null", async () => {
     "1",
     respondWith({ distance: [0, 1], altitude: [1, 2] }).fetchFunction,
   );
-  assert.equal(missing?.times, null);
+  assert.equal(missing?.timesSeconds, null);
   const mismatched = await fetchActivityStreams(
     "1",
     respondWith({ distance: [0, 1], altitude: [1, 2], time: [0] }).fetchFunction,
   );
-  assert.equal(mismatched?.times, null);
+  assert.equal(mismatched?.timesSeconds, null);
 });
 
 test("missing or different-length altitude gives null", async () => {

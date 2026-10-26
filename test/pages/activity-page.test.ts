@@ -53,9 +53,9 @@ test("streams load once however often prepare is called, then reach the elevatio
   assert.ok(fixture.requestedUrls[0]?.startsWith(STREAMS_URL));
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.deepEqual(source.distances, [0, 100, 200]);
-  assert.deepEqual(source.elevations, [10, 20, 15]);
-  assert.deepEqual(source.times, [0, 30, 60]);
+  assert.deepEqual(source.distancesMetres, [0, 100, 200]);
+  assert.deepEqual(source.elevationsMetres, [10, 20, 15]);
+  assert.deepEqual(source.timesSeconds, [0, 30, 60]);
 });
 
 test("a chart outside #elevation-chart has no profile", async () => {

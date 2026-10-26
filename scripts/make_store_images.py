@@ -37,16 +37,16 @@ def fit(image, maximum_width_pixels, maximum_height_pixels):
     return image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
 
 
-def card(canvas, image, left, top):
-    """Paste `image` on a white card with a soft shadow, top-left at (left, top)."""
+def card(canvas, image, left_pixels, top_pixels):
+    """Paste `image` on a white card with a soft shadow, top-left corner at (left_pixels, top_pixels)."""
     padding_pixels = 16
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
         (
-            left - padding_pixels,
-            top - padding_pixels + 6,
-            left + image.width + padding_pixels,
-            top + image.height + padding_pixels + 6,
+            left_pixels - padding_pixels,
+            top_pixels - padding_pixels + 6,
+            left_pixels + image.width + padding_pixels,
+            top_pixels + image.height + padding_pixels + 6,
         ),
         14,
         fill=(20, 30, 50, 60),
@@ -54,15 +54,15 @@ def card(canvas, image, left, top):
     canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(14)))
     ImageDraw.Draw(canvas).rounded_rectangle(
         (
-            left - padding_pixels,
-            top - padding_pixels,
-            left + image.width + padding_pixels,
-            top + image.height + padding_pixels,
+            left_pixels - padding_pixels,
+            top_pixels - padding_pixels,
+            left_pixels + image.width + padding_pixels,
+            top_pixels + image.height + padding_pixels,
         ),
         14,
         fill=(255, 255, 255, 255),
     )
-    canvas.paste(image, (left, top))
+    canvas.paste(image, (left_pixels, top_pixels))
 
 
 def slide(title, subtitle, place):
@@ -71,34 +71,34 @@ def slide(title, subtitle, place):
     drawing.rectangle((0, 0, SLIDE_WIDTH_PIXELS, 6), fill=GREEN)
     drawing.text((64, 52), title, font=font(44), fill=INK)
     drawing.text((64, 114), subtitle, font=font(22, REGULAR), fill=MUTED)
-    place(canvas, top=176)
+    place(canvas, top_pixels=176)
     return canvas.convert("RGB")
 
 
 def centred(name, maximum_width_pixels=1120, maximum_height_pixels=560):
-    def place(canvas, top):
+    def place(canvas, top_pixels):
         image = fit(capture(name), maximum_width_pixels, maximum_height_pixels)
         card(
             canvas,
             image,
             (SLIDE_WIDTH_PIXELS - image.width) // 2,
-            top + (SLIDE_HEIGHT_PIXELS - top - 40 - image.height) // 2,
+            top_pixels + (SLIDE_HEIGHT_PIXELS - top_pixels - 40 - image.height) // 2,
         )
 
     return place
 
 
-def splits_and_chart(canvas, top):
-    splits = fit(capture("activity-splits"), 330, SLIDE_HEIGHT_PIXELS - top - 70)
+def splits_and_chart(canvas, top_pixels):
+    splits = fit(capture("activity-splits"), 330, SLIDE_HEIGHT_PIXELS - top_pixels - 70)
     chart = fit(capture("activity-tooltip"), 720, 460)
     gap_pixels = 60
-    left = (SLIDE_WIDTH_PIXELS - splits.width - gap_pixels - chart.width) // 2
-    card(canvas, splits, left, top + 8)
+    left_pixels = (SLIDE_WIDTH_PIXELS - splits.width - gap_pixels - chart.width) // 2
+    card(canvas, splits, left_pixels, top_pixels + 8)
     card(
         canvas,
         chart,
-        left + splits.width + gap_pixels,
-        top + 8 + (splits.height - chart.height) // 2,
+        left_pixels + splits.width + gap_pixels,
+        top_pixels + 8 + (splits.height - chart.height) // 2,
     )
 
 

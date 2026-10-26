@@ -55,7 +55,7 @@ function routeChartHtml(distanceText: string, elevationText: string): string {
   );
 }
 
-// Strava's route chart props: computed gain 30 m, ending 20 m lower.
+// Strava's route chart properties: computed gain 30 m, ending 20 m lower.
 const routeDistances = [0, 1000, 2000];
 const routeElevations = [0, 30, 10];
 
