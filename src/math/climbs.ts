@@ -194,7 +194,7 @@ export function findClimbs(
     });
   };
 
-  // lowIndex: lowestMetres point since the last climb ended; highIndex: highestMetres point after it.
+  // lowIndex: lowest point since the last climb ended; highIndex: highest point after it.
   let lowIndex = 0;
   let highIndex = 0;
   for (let sampleIndex = 1; sampleIndex < sampledDistancesMetres.length; sampleIndex++) {
@@ -203,7 +203,7 @@ export function findClimbs(
     const tolerableDipMetres = Math.max(settings.allowedDipMetres, settings.allowedDipFraction * riseMetres);
     if (heightAt(highIndex) - heightAt(sampleIndex) > tolerableDipMetres) {
       if (highIndex > lowIndex) emitClimb(lowIndex, highIndex);
-      // Restart from the lowestMetres point of the descent so far.
+      // Restart from the lowest point of the descent so far.
       lowIndex = highIndex;
       for (let scanIndex = highIndex; scanIndex <= sampleIndex; scanIndex++) {
         if (heightAt(scanIndex) < heightAt(lowIndex)) lowIndex = scanIndex;

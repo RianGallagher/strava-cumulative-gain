@@ -100,7 +100,7 @@ test("pinToCheckpoints hits each checkpoint exactly and stays monotonic", () => 
   }
 });
 
-test("pinToCheckpoints falls back to distance when rawCumulativeMetres is flat but the leg climbs", () => {
+test("pinToCheckpoints falls back to distance when raw is flat but the leg climbs", () => {
   const pinned = pinToCheckpoints(
     [0, 50, 100],
     [0, 0, 0],
