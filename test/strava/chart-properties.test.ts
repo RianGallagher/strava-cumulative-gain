@@ -8,8 +8,8 @@ interface FakeFiber {
   return: FakeFiber | null;
 }
 
-const distances = [0, 100, 200];
-const elevations = [10, 12, 11];
+const distancesMetres = [0, 100, 200];
+const elevationsMetres = [10, 12, 11];
 const legs = [{ paths: [{ length: 200, elevationGain: 2, elevationLoss: 1 }] }];
 
 // Builds a fiber whose ancestors run up `depth` levels; depth 0 is the fiber itself.
@@ -31,18 +31,20 @@ function chartWithFiber(fiber: FakeFiber | null): Element {
 
 test("finds the chart properties at depth 3 and the legs at depth 6, returning React's own arrays", () => {
   const properties = new Map<number, unknown>([
-    [3, { distance: distances, elevation: elevations }],
+    [3, { distance: distancesMetres, elevation: elevationsMetres }],
     [6, { legs }],
   ]);
   const result = readChartProperties(chartWithFiber(chain(properties, 8)));
   assert.ok(result);
-  assert.equal(result.distancesMetres, distances);
-  assert.equal(result.elevationsMetres, elevations);
+  assert.equal(result.distancesMetres, distancesMetres);
+  assert.equal(result.elevationsMetres, elevationsMetres);
   assert.equal(result.legs, legs);
 });
 
 test("legs are null when no ancestor has them", () => {
-  const properties = new Map<number, unknown>([[1, { distance: distances, elevation: elevations }]]);
+  const properties = new Map<number, unknown>([
+    [1, { distance: distancesMetres, elevation: elevationsMetres }],
+  ]);
   assert.equal(readChartProperties(chartWithFiber(chain(properties, 3)))?.legs, null);
 });
 
@@ -63,6 +65,8 @@ test("arrays of different lengths are not the chart", () => {
 });
 
 test("gives up after 40 levels", () => {
-  const properties = new Map<number, unknown>([[41, { distance: distances, elevation: elevations }]]);
+  const properties = new Map<number, unknown>([
+    [41, { distance: distancesMetres, elevation: elevationsMetres }],
+  ]);
   assert.equal(readChartProperties(chartWithFiber(chain(properties, 45))), null);
 });

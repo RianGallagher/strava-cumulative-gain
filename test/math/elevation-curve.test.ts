@@ -14,9 +14,9 @@ test("sums climbs without a threshold", () => {
 });
 
 test("hysteresis ignores noise smaller than the threshold", () => {
-  const noisy = [100, 101, 100, 101, 100, 101, 100];
-  assert.equal(cumulativeClimb(noisy, 0).at(-1), 3);
-  assert.equal(cumulativeClimb(noisy, 2).at(-1), 0);
+  const noisyElevationsMetres = [100, 101, 100, 101, 100, 101, 100];
+  assert.equal(cumulativeClimb(noisyElevationsMetres, 0).at(-1), 3);
+  assert.equal(cumulativeClimb(noisyElevationsMetres, 2).at(-1), 0);
 });
 
 test("hysteresis still counts a real climb in small steps", () => {
@@ -83,14 +83,14 @@ test("buildElevationCurve end to end", () => {
 });
 
 test("pinToCheckpoints hits each checkpoint exactly and stays monotonic", () => {
-  const distances = [0, 50, 100, 150, 200];
-  const raw = [0, 10, 10, 30, 40];
+  const distancesMetres = [0, 50, 100, 150, 200];
+  const rawCumulativeMetres = [0, 10, 10, 30, 40];
   const checkpoints = [
     { distanceMetres: 0, cumulativeMetres: 0 },
     { distanceMetres: 100, cumulativeMetres: 5 },
     { distanceMetres: 200, cumulativeMetres: 25 },
   ];
-  const pinned = pinToCheckpoints(distances, raw, checkpoints);
+  const pinned = pinToCheckpoints(distancesMetres, rawCumulativeMetres, checkpoints);
   assert.equal(pinned[0], 0);
   assert.equal(pinned[2], 5);
   assert.equal(pinned[4], 25);
@@ -100,7 +100,7 @@ test("pinToCheckpoints hits each checkpoint exactly and stays monotonic", () => 
   }
 });
 
-test("pinToCheckpoints falls back to distance when raw is flat but the leg climbs", () => {
+test("pinToCheckpoints falls back to distance when rawCumulativeMetres is flat but the leg climbs", () => {
   const pinned = pinToCheckpoints(
     [0, 50, 100],
     [0, 0, 0],
@@ -135,29 +135,32 @@ test("buildElevationCurve scales a pinned curve to a differing headline total", 
     { distanceMetres: 1000, cumulativeMetres: 50 },
     { distanceMetres: 2000, cumulativeMetres: 100 },
   ];
-  const distances = [0, 1000, 2000];
-  const elevations = [0, 50, 100];
-  const scaled = buildElevationCurve(distances, elevations, {
+  const distancesMetres = [0, 1000, 2000];
+  const elevationsMetres = [0, 50, 100];
+  const scaled = buildElevationCurve(distancesMetres, elevationsMetres, {
     thresholdMetres: 0,
     checkpoints,
     totalMetres: 120,
   });
   assert.equal(scaled.valueAt(2000), 120);
   assert.equal(scaled.valueAt(1000), 60);
-  const unscaled = buildElevationCurve(distances, elevations, { thresholdMetres: 0, checkpoints });
+  const unscaled = buildElevationCurve(distancesMetres, elevationsMetres, {
+    thresholdMetres: 0,
+    checkpoints,
+  });
   assert.equal(unscaled.valueAt(2000), 100);
 });
 
 test("loss is the climb of the negated profile", () => {
-  const elevations = [100, 80, 90, 60, 70];
+  const elevationsMetres = [100, 80, 90, 60, 70];
   assert.equal(
     cumulativeClimb(
-      elevations.map((value) => -value),
+      elevationsMetres.map((value) => -value),
       0,
     ).at(-1),
     50,
   );
-  assert.equal(cumulativeClimb(elevations, 0).at(-1), 20);
+  assert.equal(cumulativeClimb(elevationsMetres, 0).at(-1), 20);
 });
 
 test("legCheckpoints reads elevationLoss and returns null when the field is absent", () => {

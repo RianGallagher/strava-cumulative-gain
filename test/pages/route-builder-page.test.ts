@@ -15,15 +15,15 @@ function builderPage(fixture: PageFixture): StravaPage {
 test("the profile is the chart properties with their legs", () => {
   const fixture = pageFixture("<svg id='chart'></svg>");
   const chart = svgById(fixture.document, "chart");
-  const distances = [0, 100];
-  const elevations = [5, 6];
-  attachChartProperties(chart, { distance: distances, elevation: elevations, legs });
+  const distancesMetres = [0, 100];
+  const elevationsMetres = [5, 6];
+  attachChartProperties(chart, { distance: distancesMetres, elevation: elevationsMetres, legs });
   const page = builderPage(fixture);
   page.prepare(() => undefined);
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.equal(source.distancesMetres, distances);
-  assert.equal(source.elevationsMetres, elevations);
+  assert.equal(source.distancesMetres, distancesMetres);
+  assert.equal(source.elevationsMetres, elevationsMetres);
   assert.equal(source.legs, legs);
   assert.equal(source.headlineGainMetres, undefined);
   assert.deepEqual(fixture.requestedUrls, []);

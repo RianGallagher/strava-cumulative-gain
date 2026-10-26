@@ -36,15 +36,15 @@ function routePage(fixture: PageFixture): StravaPage {
 test("chart properties are merged with the embedded legs and headline", () => {
   const fixture = pageFixture(chartHtml + nextDataScript(embeddedRoute), { [GPX_URL]: gpx });
   const chart = svgById(fixture.document, "chart");
-  const distances = [0, 50, 100];
-  const elevations = [1, 2, 3];
-  attachChartProperties(chart, { distance: distances, elevation: elevations });
+  const distancesMetres = [0, 50, 100];
+  const elevationsMetres = [1, 2, 3];
+  attachChartProperties(chart, { distance: distancesMetres, elevation: elevationsMetres });
   const page = routePage(fixture);
   page.prepare(() => undefined);
   const source = page.profileSource(chart);
   assert.ok(source);
-  assert.equal(source.distancesMetres, distances);
-  assert.equal(source.elevationsMetres, elevations);
+  assert.equal(source.distancesMetres, distancesMetres);
+  assert.equal(source.elevationsMetres, elevationsMetres);
   assert.deepEqual(source.legs, legs);
   assert.equal(source.headlineGainMetres, 6);
   assert.deepEqual(fixture.requestedUrls, []);

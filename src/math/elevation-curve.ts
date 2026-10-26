@@ -48,12 +48,12 @@ export function interpolateAt(
  * added). While climbing, every further rise counts immediately, until the
  * elevation falls the threshold below the climb's highest point.
  */
-export function cumulativeClimb(elevations: readonly number[], thresholdMetres: number): number[] {
-  const climbs: number[] = [];
+export function cumulativeClimb(elevationsMetres: readonly number[], thresholdMetres: number): number[] {
+  const cumulativeClimbsMetres: number[] = [];
   let totalMetres = 0;
   let isClimbing = false;
-  let referenceMetres = elevations[0] ?? 0; // lowest point, or highest while climbing
-  elevations.forEach((elevationMetres, index) => {
+  let referenceMetres = elevationsMetres[0] ?? 0; // lowest point, or highest while climbing
+  elevationsMetres.forEach((elevationMetres, index) => {
     if (index > 0) {
       if (isClimbing) {
         if (elevationMetres > referenceMetres) {
@@ -71,19 +71,19 @@ export function cumulativeClimb(elevations: readonly number[], thresholdMetres: 
         isClimbing = true;
       }
     }
-    climbs.push(totalMetres);
+    cumulativeClimbsMetres.push(totalMetres);
   });
-  return climbs;
+  return cumulativeClimbsMetres;
 }
 
 /** Scale so the last value equals the page total; unchanged if that is impossible. */
-export function scaleToTotal(values: readonly number[], totalMetres: number | undefined): number[] {
-  const last = values.at(-1);
+export function scaleToTotal(valuesMetres: readonly number[], totalMetres: number | undefined): number[] {
+  const last = valuesMetres.at(-1);
   if (totalMetres === undefined || !(totalMetres > 0) || last === undefined || !(last > 0)) {
-    return [...values];
+    return [...valuesMetres];
   }
   const factor = totalMetres / last;
-  return values.map((value) => value * factor);
+  return valuesMetres.map((value) => value * factor);
 }
 
 /**
@@ -92,13 +92,13 @@ export function scaleToTotal(values: readonly number[], totalMetres: number | un
  * happens; at each checkpoint the value is exactly the checkpoint's.
  */
 export function pinToCheckpoints(
-  distances: readonly number[],
-  values: readonly number[],
+  distancesMetres: readonly number[],
+  valuesMetres: readonly number[],
   checkpoints: readonly Checkpoint[],
 ): number[] {
-  if (checkpoints.length < 2) return [...values];
+  if (checkpoints.length < 2) return [...valuesMetres];
   let segmentIndex = 0;
-  return distances.map((distanceMetres, index) => {
+  return distancesMetres.map((distanceMetres, index) => {
     while (
       segmentIndex < checkpoints.length - 2 &&
       distanceMetres > (checkpoints[segmentIndex + 1]?.distanceMetres ?? 0)
@@ -107,11 +107,11 @@ export function pinToCheckpoints(
     }
     const start = checkpoints[segmentIndex];
     const end = checkpoints[segmentIndex + 1];
-    const rawStart = interpolateAt(distances, values, start.distanceMetres);
-    const rawEnd = interpolateAt(distances, values, end.distanceMetres);
+    const rawStartMetres = interpolateAt(distancesMetres, valuesMetres, start.distanceMetres);
+    const rawEndMetres = interpolateAt(distancesMetres, valuesMetres, end.distanceMetres);
     let fraction: number;
-    if (rawEnd > rawStart) {
-      fraction = ((values[index] ?? 0) - rawStart) / (rawEnd - rawStart);
+    if (rawEndMetres > rawStartMetres) {
+      fraction = ((valuesMetres[index] ?? 0) - rawStartMetres) / (rawEndMetres - rawStartMetres);
     } else if (end.distanceMetres > start.distanceMetres) {
       fraction = (distanceMetres - start.distanceMetres) / (end.distanceMetres - start.distanceMetres);
     } else {
@@ -158,19 +158,19 @@ export function legCheckpoints(
 }
 
 export function buildElevationCurve(
-  distances: readonly number[],
-  elevations: readonly number[],
+  distancesMetres: readonly number[],
+  elevationsMetres: readonly number[],
   options: {
     thresholdMetres: number;
     checkpoints?: readonly Checkpoint[] | null;
     totalMetres?: number;
   },
 ): ElevationCurve {
-  let values = cumulativeClimb(elevations, options.thresholdMetres);
+  let valuesMetres = cumulativeClimb(elevationsMetres, options.thresholdMetres);
   if (options.checkpoints && options.checkpoints.length > 1) {
-    values = pinToCheckpoints(distances, values, options.checkpoints);
+    valuesMetres = pinToCheckpoints(distancesMetres, valuesMetres, options.checkpoints);
   }
   // Scaled after pinning too: Strava's headline total can differ from the sum of its leg gains.
-  values = scaleToTotal(values, options.totalMetres);
-  return { valueAt: (distanceMetres) => interpolateAt(distances, values, distanceMetres) };
+  valuesMetres = scaleToTotal(valuesMetres, options.totalMetres);
+  return { valueAt: (distanceMetres) => interpolateAt(distancesMetres, valuesMetres, distanceMetres) };
 }

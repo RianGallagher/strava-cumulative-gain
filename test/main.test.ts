@@ -10,13 +10,16 @@ const STREAMS_URL = "/activities/42/streams";
 
 // Flat to 500 m, a 10% climb to 1500 m, then a gentle descent: gain at 1 km
 // is 50 m and the climb covers it.
-const activityDistances = Array.from({ length: 21 }, (_unused, index) => index * 100);
-const activityElevations = activityDistances.map((distanceMetres) => {
+const activityDistancesMetres = Array.from({ length: 21 }, (_unused, index) => index * 100);
+const activityElevationsMetres = activityDistancesMetres.map((distanceMetres) => {
   if (distanceMetres <= 500) return 100;
   if (distanceMetres <= 1500) return 100 + (distanceMetres - 500) / 10;
   return 200 - (distanceMetres - 1500) / 20;
 });
-const activityStreams = JSON.stringify({ distance: activityDistances, altitude: activityElevations });
+const activityStreams = JSON.stringify({
+  distance: activityDistancesMetres,
+  altitude: activityElevationsMetres,
+});
 
 function activityRow(id: string, title: string, value: string, positionPixels: number): string {
   return (
@@ -56,8 +59,8 @@ function routeChartHtml(distanceText: string, elevationText: string): string {
 }
 
 // Strava's route chart properties: computed gain 30 m, ending 20 m lower.
-const routeDistances = [0, 1000, 2000];
-const routeElevations = [0, 30, 10];
+const routeDistancesMetres = [0, 1000, 2000];
+const routeElevationsMetres = [0, 30, 10];
 
 const streamsBodies = { [STREAMS_URL]: activityStreams };
 
@@ -105,8 +108,8 @@ test("a route tooltip's Gain matches Strava's headline at the end of the route",
   const harness = startOn("/routes/7", html, { bodiesByUrlPrefix: streamsBodies });
   const { document, window } = harness;
   attachChartProperties(requireElement(document, "#route-chart"), {
-    distance: routeDistances,
-    elevation: routeElevations,
+    distance: routeDistancesMetres,
+    elevation: routeElevationsMetres,
   });
   await waitFor(window, () => addedRowText(document, "gain") !== undefined, "the Gain row");
   assert.equal(addedRowText(document, "gain"), "Gain 36 m");
@@ -124,7 +127,7 @@ test("after navigating from an activity to a route, the route's data is shown, n
   document.body.innerHTML = routeChartHtml("1.00 km", "30 m");
   const routeChart = requireElement(document, "#route-chart");
   setBoundingRect(routeChart, { left: 0, top: 0, width: 600, height: 200 });
-  attachChartProperties(routeChart, { distance: routeDistances, elevation: routeElevations });
+  attachChartProperties(routeChart, { distance: routeDistancesMetres, elevation: routeElevationsMetres });
 
   await waitFor(window, () => addedRowText(document, "gain") !== undefined, "the route's Gain row");
   assert.equal(addedRowText(document, "gain"), "Gain 30 m");

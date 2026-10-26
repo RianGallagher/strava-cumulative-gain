@@ -49,38 +49,38 @@ const DEFAULT_OPTIONS: ClimbDetectionOptions = {
 };
 
 interface Profile {
-  distances: number[];
-  elevations: number[];
+  distancesMetres: number[];
+  elevationsMetres: number[];
 }
 
 /** Even spacing makes grades and windows simple index arithmetic. */
 function resample(
-  distances: readonly number[],
-  elevations: readonly number[],
+  distancesMetres: readonly number[],
+  elevationsMetres: readonly number[],
   spacingMetres: number,
   smoothingMetres: number,
 ): Profile {
-  const totalMetres = distances[distances.length - 1] ?? 0;
+  const totalMetres = distancesMetres[distancesMetres.length - 1] ?? 0;
   const sampleCount = Math.max(2, Math.floor(totalMetres / spacingMetres) + 1);
-  const sampledDistances = Array.from(new Array<number>(sampleCount).keys(), (sampleIndex) =>
+  const sampledDistancesMetres = Array.from(new Array<number>(sampleCount).keys(), (sampleIndex) =>
     Math.min(sampleIndex * spacingMetres, totalMetres),
   );
-  const rawElevations = sampledDistances.map((sampleMetres) =>
-    interpolateAt(distances, elevations, sampleMetres),
+  const rawElevationsMetres = sampledDistancesMetres.map((sampleMetres) =>
+    interpolateAt(distancesMetres, elevationsMetres, sampleMetres),
   );
   const halfWindowSamples = Math.max(0, Math.round(smoothingMetres / spacingMetres / 2));
-  const sampledElevations = Array.from(rawElevations.keys(), (centreIndex) => {
+  const sampledElevationsMetres = Array.from(rawElevationsMetres.keys(), (centreIndex) => {
     let elevationSumMetres = 0;
     let count = 0;
     const firstIndex = Math.max(0, centreIndex - halfWindowSamples);
     const lastIndex = Math.min(sampleCount - 1, centreIndex + halfWindowSamples);
     for (let windowIndex = firstIndex; windowIndex <= lastIndex; windowIndex++) {
-      elevationSumMetres += rawElevations[windowIndex] ?? 0;
+      elevationSumMetres += rawElevationsMetres[windowIndex] ?? 0;
       count++;
     }
     return elevationSumMetres / count;
   });
-  return { distances: sampledDistances, elevations: sampledElevations };
+  return { distancesMetres: sampledDistancesMetres, elevationsMetres: sampledElevationsMetres };
 }
 
 /**
@@ -88,21 +88,21 @@ function resample(
  * callers wanting Strava-consistent gain should read it off their gain curve.
  */
 export function findClimbs(
-  distances: readonly number[],
-  elevations: readonly number[],
+  distancesMetres: readonly number[],
+  elevationsMetres: readonly number[],
   options: Partial<ClimbDetectionOptions> = {},
 ): Climb[] {
   const settings = { ...DEFAULT_OPTIONS, ...options };
-  if (distances.length < 2) return [];
+  if (distancesMetres.length < 2) return [];
   const profile = resample(
-    distances,
-    elevations,
+    distancesMetres,
+    elevationsMetres,
     settings.sampleSpacingMetres,
     settings.smoothingWindowMetres,
   );
-  const sampledDistances = profile.distances;
-  const heightAt = (sampleIndex: number): number => profile.elevations[sampleIndex] ?? 0;
-  const distanceAt = (sampleIndex: number): number => sampledDistances[sampleIndex] ?? 0;
+  const sampledDistancesMetres = profile.distancesMetres;
+  const heightAt = (sampleIndex: number): number => profile.elevationsMetres[sampleIndex] ?? 0;
+  const distanceAt = (sampleIndex: number): number => sampledDistancesMetres[sampleIndex] ?? 0;
   const edgeWindowSamples = Math.max(
     1,
     Math.round(settings.flatEdgeWindowMetres / settings.sampleSpacingMetres),
@@ -124,22 +124,23 @@ export function findClimbs(
     rangeEnd: number,
   ): { plateauStart: number; plateauEnd: number } | null => {
     for (let plateauStart = rangeStart; plateauStart + plateauSamples <= rangeEnd; plateauStart++) {
-      let lowest = Infinity;
-      let highest = -Infinity;
+      let lowestMetres = Infinity;
+      let highestMetres = -Infinity;
       for (let index = plateauStart; index <= plateauStart + plateauSamples; index++) {
-        lowest = Math.min(lowest, heightAt(index));
-        highest = Math.max(highest, heightAt(index));
+        lowestMetres = Math.min(lowestMetres, heightAt(index));
+        highestMetres = Math.max(highestMetres, heightAt(index));
       }
-      if (highest - lowest > settings.plateauToleranceMetres) continue;
+      if (highestMetres - lowestMetres > settings.plateauToleranceMetres) continue;
       let plateauEnd = plateauStart + plateauSamples;
       while (
         plateauEnd + 1 <= rangeEnd &&
-        Math.max(highest, heightAt(plateauEnd + 1)) - Math.min(lowest, heightAt(plateauEnd + 1)) <=
+        Math.max(highestMetres, heightAt(plateauEnd + 1)) -
+          Math.min(lowestMetres, heightAt(plateauEnd + 1)) <=
           settings.plateauToleranceMetres
       ) {
         plateauEnd++;
-        lowest = Math.min(lowest, heightAt(plateauEnd));
-        highest = Math.max(highest, heightAt(plateauEnd));
+        lowestMetres = Math.min(lowestMetres, heightAt(plateauEnd));
+        highestMetres = Math.max(highestMetres, heightAt(plateauEnd));
       }
       return { plateauStart, plateauEnd };
     }
@@ -193,16 +194,16 @@ export function findClimbs(
     });
   };
 
-  // lowIndex: lowest point since the last climb ended; highIndex: highest point after it.
+  // lowIndex: lowestMetres point since the last climb ended; highIndex: highestMetres point after it.
   let lowIndex = 0;
   let highIndex = 0;
-  for (let sampleIndex = 1; sampleIndex < sampledDistances.length; sampleIndex++) {
+  for (let sampleIndex = 1; sampleIndex < sampledDistancesMetres.length; sampleIndex++) {
     if (heightAt(sampleIndex) > heightAt(highIndex)) highIndex = sampleIndex;
     const riseMetres = heightAt(highIndex) - heightAt(lowIndex);
     const tolerableDipMetres = Math.max(settings.allowedDipMetres, settings.allowedDipFraction * riseMetres);
     if (heightAt(highIndex) - heightAt(sampleIndex) > tolerableDipMetres) {
       if (highIndex > lowIndex) emitClimb(lowIndex, highIndex);
-      // Restart from the lowest point of the descent so far.
+      // Restart from the lowestMetres point of the descent so far.
       lowIndex = highIndex;
       for (let scanIndex = highIndex; scanIndex <= sampleIndex; scanIndex++) {
         if (heightAt(scanIndex) < heightAt(lowIndex)) lowIndex = scanIndex;
