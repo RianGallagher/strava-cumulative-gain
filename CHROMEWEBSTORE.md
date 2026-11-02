@@ -67,7 +67,7 @@ Adds cumulative elevation gain and loss to the elevation charts and splits on St
 | Store Icon | 128×128 PNG | ✅ Ready | `icons/icon128.png` |
 | Screenshot 1 | 1280×800 | ✅ Ready | `store/images/screenshot-1-tooltip.png` |
 | Screenshot 2 | 1280×800 | ✅ Ready | `store/images/screenshot-2-climbs.png` |
-| Screenshot 3 | 1280×800 | 🟡 Needs update | `store/images/screenshot-3-splits.png` |
+| Screenshot 3 | 1280×800 | ✅ Ready | `store/images/screenshot-3-splits.png` |
 | Screenshot 4 | 1280×800 | ✅ Ready | `store/images/screenshot-4-builder.png` |
 | Screenshot 5 | 1280×800 | ⬜ Not created | — |
 | Small Promo Tile | 440×280 | ✅ Ready | `store/images/promo-small.png` |
@@ -76,9 +76,10 @@ Adds cumulative elevation gain and loss to the elevation charts and splits on St
 ### Screenshot Notes
 1. Route chart tooltip with Gain and Loss (climbs off) — the base feature.
 2. Same chart with "Show climbs" ticked: numbered bands, climb row, Climbs table.
-3. Activity Splits in gain/loss view next to the activity tooltip. Needs a
-   re-capture: the Elev header is now a button (looks the same, but recapture
-   after reloading 1.0.0 to be sure it matches).
+3. Activity Splits in gain/loss view next to the activity tooltip. Still
+   current: the Elev header became a button, but its reset styles make it
+   render as before ("+/− ⇅"), and its focus outline only shows on keyboard
+   focus.
 4. Route builder stats bar and chart with "Show climbs" ticked.
 
 Captures are cropped to Strava's charts and tables only: no names, avatars,
