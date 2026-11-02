@@ -20,6 +20,9 @@ Also:
   switch that column between Strava's net value and "+gain/−loss" for each
   split (the net figure hides ups and downs). The choice is remembered.
 
+Works with Strava set to English only: the tooltip and the activity's
+Elevation total are found by their English labels.
+
 ## Install
 
 1. `npm install && npm run build` (writes `build/content.js`, the bundled

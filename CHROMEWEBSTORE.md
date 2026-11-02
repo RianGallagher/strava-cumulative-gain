@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Cumulative Elevation for Strava
 
-> Last Updated: 2026-10-11
+> Last Updated: 2026-11-02
 
 Single source of truth for the Developer Dashboard. Copy each field across.
 Not included in the upload zip.
@@ -34,6 +34,9 @@ HOW TO USE
 3. On an activity, click "Elev" at the top of the Splits table to switch between net elevation and gain/loss.
 4. To see climbs, tick "Show climbs" under the elevation chart (beside "Hide Elevation" in the route builder). Your choice is remembered.
 
+LANGUAGE
+Works with Strava set to English. Other languages aren't supported yet.
+
 PRIVACY
 Everything is calculated in your browser. The extension has no servers, accounts, analytics or tracking, and never sends your data anywhere. It remembers only two display settings (Show climbs, and the Splits view) on your computer.
 
@@ -41,7 +44,7 @@ PERMISSIONS
 "Read and change your data on www.strava.com" — needed to read the elevation data behind Strava's charts and add the gain, loss and climb details to them. The extension runs on strava.com only and asks for no other permissions.
 
 SUPPORT
-Questions or bugs: CONTACT_EMAIL
+Questions or bugs: CONTACT_EMAIL, or open an issue at https://github.com/RianGallagher/strava-cumulative-gain/issues
 
 Not affiliated with or endorsed by Strava, Inc. Strava is a trademark of Strava, Inc.
 
@@ -132,11 +135,9 @@ Stored: two keys in strava.com's local storage — `cumulative-gain:climbs` and
 
 ## Privacy Policy
 
-**Privacy Policy URL** — ⬜ not yet live. Source: `PRIVACY.md` (replace
-`CONTACT_EMAIL` first). Options: make the repo public and link
-`https://github.com/RianGallagher/strava-cumulative-gain/blob/main/PRIVACY.md`,
-or publish it as a public Gist / GitHub Pages page. Check the link loads
-before submitting.
+**Privacy Policy URL** — https://github.com/RianGallagher/strava-cumulative-gain/blob/main/PRIVACY.md
+(live once the repo is public and `CONTACT_EMAIL` is replaced; open it in a
+private window before submitting).
 
 ## Distribution
 
@@ -146,10 +147,10 @@ before submitting.
 
 ## Developer Info
 
-**Publisher Name** — ⬜ your choice (shown on the listing)
-**Contact Email** — ⬜ `CONTACT_EMAIL` (shown publicly; must be monitored)
-**Support URL / Email** — ⬜ the contact email, or GitHub Issues if the repo goes public
-**Homepage URL** — ⬜ optional (the GitHub repo if public)
+**Publisher Name** — Rian Gallagher
+**Contact Email** — ⬜ `CONTACT_EMAIL`: a dedicated address for this extension, not a personal inbox (shown publicly; must be monitored)
+**Support URL** — https://github.com/RianGallagher/strava-cumulative-gain/issues
+**Homepage URL** — https://github.com/RianGallagher/strava-cumulative-gain
 
 ## Version History
 
@@ -171,9 +172,13 @@ only the new page's data is shown.
 ## Review Notes
 
 ### Known Issues / Limitations
+- English only. The tooltip is found by its English labels (Dist, Elev,
+  Grade) and the activity total by "Elevation", so with Strava set to another
+  language the extension adds nothing. Stated in the description.
 - Depends on how Strava builds its pages; a Strava redesign can break it until
-  updated. It finds charts by their text and data, not Strava's class names,
-  which survives most changes.
+  updated. Tooltips are found by their text rather than class names, which
+  survives most changes; each page's layout relies on a few element IDs and
+  labels, all kept in that page's adapter.
 - Climb detection is tuned on a few running routes and activities; unusual
   profiles may split or merge climbs differently from what a rider expects.
 - The two settings live in strava.com's local storage, so clearing strava.com
