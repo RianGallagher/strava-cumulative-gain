@@ -44,7 +44,7 @@ PERMISSIONS
 "Read and change your data on www.strava.com" — needed to read the elevation data behind Strava's charts and add the gain, loss and climb details to them. The extension runs on strava.com only and asks for no other permissions.
 
 SUPPORT
-Questions or bugs: CONTACT_EMAIL, or open an issue at https://github.com/RianGallagher/strava-cumulative-gain/issues
+Questions or bugs: rianogallagher@gmail.com, or open an issue at https://github.com/RianGallagher/strava-cumulative-gain/issues
 
 Not affiliated with or endorsed by Strava, Inc. Strava is a trademark of Strava, Inc.
 
@@ -137,8 +137,7 @@ Stored: two keys in strava.com's local storage — `cumulative-gain:climbs` and
 ## Privacy Policy
 
 **Privacy Policy URL** — https://github.com/RianGallagher/strava-cumulative-gain/blob/main/PRIVACY.md
-(live once the repo is public and `CONTACT_EMAIL` is replaced; open it in a
-private window before submitting).
+(live; open it in a private window before submitting).
 
 ## Distribution
 
@@ -149,7 +148,7 @@ private window before submitting).
 ## Developer Info
 
 **Publisher Name** — Rian Gallagher
-**Contact Email** — ⬜ `CONTACT_EMAIL`: a dedicated address for this extension, not a personal inbox (shown publicly; must be monitored)
+**Contact Email** — rianogallagher@gmail.com (verify it in the dashboard; shown publicly; must be monitored)
 **Support URL** — https://github.com/RianGallagher/strava-cumulative-gain/issues
 **Homepage URL** — https://github.com/RianGallagher/strava-cumulative-gain
 

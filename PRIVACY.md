@@ -1,6 +1,6 @@
 # Privacy Policy — Cumulative Elevation for Strava
 
-_Last updated: 11 October 2026_
+_Last updated: 2 November 2026_
 
 Cumulative Elevation for Strava ("the extension") adds elevation gain, loss and
 optional climb details to Strava's own elevation charts. It is designed to
@@ -42,7 +42,7 @@ with a new "Last updated" date.
 
 ## Contact
 
-Questions about this policy: CONTACT_EMAIL
+Questions about this policy: rianogallagher@gmail.com
 
 ---
 
