@@ -1,6 +1,6 @@
 # Privacy Policy — Cumulative Elevation for Strava
 
-_Last updated: 2 November 2026_
+_Last updated: 9 November 2026_
 
 Cumulative Elevation for Strava ("the extension") adds elevation gain, loss and
 optional climb details to Strava's own elevation charts. It is designed to
@@ -15,6 +15,11 @@ handle as little data as possible and to keep everything on your device.
   route pages it may request the route's GPX file from `www.strava.com`. These
   requests go only to Strava, using your existing Strava session, and return
   the same data Strava's page already shows you.
+
+In Chrome Web Store terms this is **website content** (the elevation, distance
+and time data behind Strava's charts) and, when a route's GPX file is used,
+**location** (the route's GPS coordinates, used only to work out distance
+along the route). Both are processed on your device and never leave it.
 
 ## What it stores
 

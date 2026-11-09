@@ -116,11 +116,10 @@ and executed.
 | User activity | No | No | — | No |
 | Website content | Processed locally only | No | Elevation, distance and time behind Strava's charts → gain/loss | No |
 
-Recommended dashboard answer: tick no data types, since none is collected or
-transmitted. The cautious alternative — tick Location and Website content and
-describe them as processed locally — is also accurate. Keep the privacy policy
-consistent with whichever you choose (it already describes the local
-processing).
+Dashboard answer: tick **Location** and **Website content**. Google's user
+data FAQ says extensions must disclose how they handle user data "even when
+data is processed or stored locally", so ticking nothing would understate it.
+`PRIVACY.md` names both types and says they never leave the device.
 
 Network requests: only to `www.strava.com`, with the user's existing session:
 the activity's distance/altitude/time streams, and a route's GPX as a fallback.
